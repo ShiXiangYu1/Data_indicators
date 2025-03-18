@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 数据指标分析平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">首页</li>
+{% endblock %}
+
+{% block page_title %}数据指标分析平台{% endblock %}
+
+{% block content %}
+<!-- 功能概览卡片 -->
+<div class="row g-4 mb-5">
+    <!-- 指标分析卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-chart-bar fa-3x text-primary"></i>
+                </div>
+                <h5 class="card-title">指标分析</h5>
+                <p class="card-text">快速分析单个指标的变化趋势、异常情况和关键洞察。</p>
+                <a href="{{ url_for('metric_analysis') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表分析卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-chart-pie fa-3x text-success"></i>
+                </div>
+                <h5 class="card-title">图表分析</h5>
+                <p class="card-text">深入分析各类图表数据，发现数据背后的规律和趋势。</p>
+                <a href="{{ url_for('chart_analysis') }}" class="btn btn-success">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对比分析卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-not-equal fa-3x text-info"></i>
+                </div>
+                <h5 class="card-title">对比分析</h5>
+                <p class="card-text">多维度指标对比，发现指标间的关联性和差异。</p>
+                <a href="{{ url_for('comparison_analysis') }}" class="btn btn-info">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 根因分析卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-network-wired fa-3x text-warning"></i>
+                </div>
+                <h5 class="card-title">根因分析</h5>
+                <p class="card-text">智能分析问题根源，构建因果关系网络。</p>
+                <a href="{{ url_for('root_cause_analysis') }}" class="btn btn-warning">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预测分析卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-crystal-ball fa-3x text-danger"></i>
+                </div>
+                <h5 class="card-title">预测分析</h5>
+                <p class="card-text">基于历史数据预测未来趋势，提前发现潜在问题。</p>
+                <a href="{{ url_for('prediction_analysis') }}" class="btn btn-danger">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 智能建议卡片 -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="card-icon mb-3">
+                    <i class="fas fa-lightbulb fa-3x text-secondary"></i>
+                </div>
+                <h5 class="card-title">智能建议</h5>
+                <p class="card-text">根据分析结果生成智能建议，指导决策制定。</p>
+                <a href="{{ url_for('suggestion_analysis') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 平台特点 -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">平台特点</h2>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <i class="fas fa-bolt fa-2x text-primary mb-3"></i>
+                    <h5>快速分析</h5>
+                    <p>支持实时数据分析，快速生成洞察报告。</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <i class="fas fa-brain fa-2x text-success mb-3"></i>
+                    <h5>智能解读</h5>
+                    <p>运用AI技术，自动生成数据解读文本。</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <i class="fas fa-chart-line fa-2x text-info mb-3"></i>
+                    <h5>可视化展示</h5>
+                    <p>丰富的图表类型，直观展示数据趋势。</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <i class="fas fa-shield-alt fa-2x text-warning mb-3"></i>
+                    <h5>安全可靠</h5>
+                    <p>数据安全保护，确保分析结果可靠。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 使用指南 -->
+<div class="row">
+    <div class="col-12">
+        <h2 class="text-center mb-4">使用指南</h2>
+        <div class="accordion" id="guideAccordion">
+            <!-- 数据准备 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guide1">
+                        <i class="fas fa-database me-2"></i>数据准备
+                    </button>
+                </h2>
+                <div id="guide1" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
+                    <div class="accordion-body">
+                        <p>1. 准备您的数据文件（支持CSV、Excel等格式）</p>
+                        <p>2. 确保数据格式正确，包含必要的字段</p>
+                        <p>3. 上传数据到平台进行分析</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 选择分析类型 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guide2">
+                        <i class="fas fa-tasks me-2"></i>选择分析类型
+                    </button>
+                </h2>
+                <div id="guide2" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                    <div class="accordion-body">
+                        <p>1. 根据您的分析需求选择合适的分析类型</p>
+                        <p>2. 设置分析参数和选项</p>
+                        <p>3. 点击"开始分析"按钮</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 查看结果 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guide3">
+                        <i class="fas fa-chart-bar me-2"></i>查看结果
+                    </button>
+                </h2>
+                <div id="guide3" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                    <div class="accordion-body">
+                        <p>1. 查看分析结果和可视化图表</p>
+                        <p>2. 阅读自动生成的解读文本</p>
+                        <p>3. 导出分析报告或分享结果</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    transition: transform 0.2s;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.accordion-item {
+    border: none;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.accordion-button {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+    color: #0d6efd;
+}
+
+.accordion-body {
+    background-color: white;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+</style>
+{% endblock %} 

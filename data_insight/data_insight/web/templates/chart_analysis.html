@@ -1,0 +1,508 @@
+{% extends "layout.html" %}
+
+{% block title %}图表分析 - 数据指标解读系统{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('web.static', filename='dist/charts.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <!-- 页面标题 -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="text-primary">
+        <i class="fas fa-chart-line me-2"></i>图表分析
+      </h2>
+      <p class="text-muted">上传或选择图表数据，获取自动化分析和洞察</p>
+    </div>
+  </div>
+
+  <!-- 提示信息区域 -->
+  <div id="alert-container"></div>
+
+  <!-- 加载动画 -->
+  <div id="loading-spinner" class="text-center" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">加载中...</span>
+    </div>
+    <p class="mt-2">正在分析，请稍候...</p>
+  </div>
+
+  <!-- 主要内容 -->
+  <div class="row">
+    <!-- 数据输入区域 -->
+    <div class="col-lg-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">数据输入</h5>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-tabs" id="dataInputTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-panel" type="button" role="tab">上传数据</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="sample-tab" data-bs-toggle="tab" data-bs-target="#sample-panel" type="button" role="tab">样例数据</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-panel" type="button" role="tab">手动输入</button>
+            </li>
+          </ul>
+
+          <div class="tab-content mt-3" id="dataInputTabContent">
+            <!-- 上传数据面板 -->
+            <div class="tab-pane fade show active" id="upload-panel" role="tabpanel">
+              <form id="upload-form">
+                <div class="mb-3">
+                  <label for="chart-title" class="form-label">图表标题</label>
+                  <input type="text" class="form-control" id="chart-title" placeholder="请输入图表标题">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="chart-type" class="form-label">图表类型</label>
+                  <select class="form-select" id="chart-type">
+                    <option value="line">折线图</option>
+                    <option value="bar">柱状图</option>
+                    <option value="pie">饼图</option>
+                    <option value="scatter">散点图</option>
+                  </select>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="chart-file" class="form-label">数据文件</label>
+                  <input type="file" class="form-control" id="chart-file" accept=".csv,.json,.xlsx">
+                  <div class="form-text">支持CSV、JSON和Excel格式</div>
+                </div>
+                
+                <button type="button" id="upload-btn" class="btn btn-primary w-100">
+                  <i class="fas fa-upload me-2"></i>上传并分析
+                </button>
+              </form>
+            </div>
+            
+            <!-- 样例数据面板 -->
+            <div class="tab-pane fade" id="sample-panel" role="tabpanel">
+              <div class="mb-3">
+                <label for="sample-select" class="form-label">选择样例</label>
+                <select class="form-select" id="sample-select">
+                  <option value="sales_trend">月度销售额趋势</option>
+                  <option value="conversion_rate">用户转化率趋势</option>
+                  <option value="category_distribution">产品类别分布</option>
+                  <option value="user_growth">用户增长对比</option>
+                </select>
+              </div>
+              
+              <div class="sample-preview mt-3 mb-3">
+                <p class="text-muted">样例数据预览：</p>
+                <div id="sample-preview-container" class="border rounded p-2 bg-light" style="height: 150px; overflow: auto;">
+                  <pre id="sample-preview-content" class="mb-0"></pre>
+                </div>
+              </div>
+              
+              <button type="button" id="sample-btn" class="btn btn-primary w-100">
+                <i class="fas fa-play me-2"></i>使用样例数据分析
+              </button>
+            </div>
+            
+            <!-- 手动输入面板 -->
+            <div class="tab-pane fade" id="manual-panel" role="tabpanel">
+              <form id="manual-form">
+                <div class="mb-3">
+                  <label for="manual-title" class="form-label">图表标题</label>
+                  <input type="text" class="form-control" id="manual-title" placeholder="请输入图表标题">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="manual-type" class="form-label">图表类型</label>
+                  <select class="form-select" id="manual-type">
+                    <option value="line">折线图</option>
+                    <option value="bar">柱状图</option>
+                  </select>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="manual-data" class="form-label">数据</label>
+                  <textarea class="form-control" id="manual-data" rows="6" placeholder='{"x_axis": {"label": "月份", "values": ["1月", "2月", "3月"]}, "y_axis": {"label": "销售额", "series": [{"name": "系列1", "values": [100, 150, 120]}]}}'></textarea>
+                  <div class="form-text">请输入JSON格式的数据</div>
+                </div>
+                
+                <button type="button" id="manual-btn" class="btn btn-primary w-100">
+                  <i class="fas fa-chart-bar me-2"></i>生成并分析
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 图表展示区域 -->
+    <div class="col-lg-8 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">图表可视化</h5>
+          <div class="btn-group">
+            <button type="button" id="refresh-chart-btn" class="btn btn-sm btn-outline-secondary" title="刷新">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button type="button" id="download-chart-btn" class="btn btn-sm btn-outline-secondary" title="下载">
+              <i class="fas fa-download"></i>
+            </button>
+            <button type="button" id="fullscreen-chart-btn" class="btn btn-sm btn-outline-secondary" title="全屏">
+              <i class="fas fa-expand"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chart-container" class="chart-container">
+            <canvas id="main-chart"></canvas>
+          </div>
+          <div id="empty-chart-message" class="text-center py-5">
+            <i class="fas fa-chart-area text-muted" style="font-size: 48px;"></i>
+            <p class="mt-3 text-muted">选择或上传数据以生成图表</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 分析结果区域 -->
+  <div class="row">
+    <div class="col-12 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">分析结果</h5>
+        </div>
+        <div class="card-body">
+          <div id="empty-analysis-message" class="text-center py-4">
+            <i class="fas fa-search text-muted" style="font-size: 48px;"></i>
+            <p class="mt-3 text-muted">上传或选择数据后将显示分析结果</p>
+          </div>
+          
+          <div id="analysis-content" style="display: none;">
+            <ul class="nav nav-tabs" id="analysisTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-panel" type="button" role="tab">摘要</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends-panel" type="button" role="tab">趋势分析</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="anomalies-tab" data-bs-toggle="tab" data-bs-target="#anomalies-panel" type="button" role="tab">异常点分析</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="comparisons-tab" data-bs-toggle="tab" data-bs-target="#comparisons-panel" type="button" role="tab">对比分析</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights-panel" type="button" role="tab">关键洞察</button>
+              </li>
+            </ul>
+            
+            <div class="tab-content mt-3" id="analysisTabContent">
+              <!-- 摘要面板 -->
+              <div class="tab-pane fade show active" id="summary-panel" role="tabpanel">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">图表基本信息</h5>
+                        <table class="table table-borderless">
+                          <tbody id="chart-info-table">
+                            <!-- 动态填充内容 -->
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">数据统计信息</h5>
+                        <table class="table table-borderless">
+                          <tbody id="statistics-table">
+                            <!-- 动态填充内容 -->
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-body">
+                    <h5 class="card-title">分析摘要</h5>
+                    <p id="summary-text" class="card-text"></p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 趋势分析面板 -->
+              <div class="tab-pane fade" id="trends-panel" role="tabpanel">
+                <div class="row">
+                  <div class="col-lg-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">整体趋势</h5>
+                        <p id="overall-trend-text" class="card-text"></p>
+                        <div class="trend-indicators mt-3">
+                          <div class="row text-center">
+                            <div class="col-4">
+                              <div class="trend-indicator">
+                                <span id="trend-type-icon" class="trend-icon"></span>
+                                <p class="mb-0 mt-2">趋势类型</p>
+                                <h4 id="trend-type" class="mb-0"></h4>
+                              </div>
+                            </div>
+                            <div class="col-4">
+                              <div class="trend-indicator">
+                                <span id="trend-strength-icon" class="trend-icon"></span>
+                                <p class="mb-0 mt-2">趋势强度</p>
+                                <h4 id="trend-strength" class="mb-0"></h4>
+                              </div>
+                            </div>
+                            <div class="col-4">
+                              <div class="trend-indicator">
+                                <span id="trend-consistency-icon" class="trend-icon"></span>
+                                <p class="mb-0 mt-2">一致性</p>
+                                <h4 id="trend-consistency" class="mb-0"></h4>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">趋势预测</h5>
+                        <div id="trend-forecast-chart" class="chart-container" style="height: 200px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-body">
+                    <h5 class="card-title">各系列趋势分析</h5>
+                    <div id="series-trends-container">
+                      <!-- 动态填充内容 -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 异常点分析面板 -->
+              <div class="tab-pane fade" id="anomalies-panel" role="tabpanel">
+                <div class="row mb-4">
+                  <div class="col-lg-6">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <h5 class="card-title">异常点概览</h5>
+                        <p id="anomalies-summary-text" class="card-text"></p>
+                        <div class="text-center mt-3">
+                          <div class="row">
+                            <div class="col-6">
+                              <div class="anomaly-stat">
+                                <h3 id="anomaly-count" class="mb-0"></h3>
+                                <p class="text-muted mb-0">异常点数量</p>
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <div class="anomaly-stat">
+                                <h3 id="anomaly-percentage" class="mb-0"></h3>
+                                <p class="text-muted mb-0">异常点占比</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <h5 class="card-title">异常点可视化</h5>
+                        <div id="anomalies-chart" class="chart-container" style="height: 200px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-body">
+                    <h5 class="card-title">异常点详情</h5>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                          <tr>
+                            <th>位置</th>
+                            <th>值</th>
+                            <th>预期范围</th>
+                            <th>偏离程度</th>
+                            <th>可能原因</th>
+                          </tr>
+                        </thead>
+                        <tbody id="anomalies-table">
+                          <!-- 动态填充内容 -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 对比分析面板 -->
+              <div class="tab-pane fade" id="comparisons-panel" role="tabpanel">
+                <div class="row mb-4">
+                  <div class="col-lg-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">数据分布</h5>
+                        <div id="distribution-chart" class="chart-container" style="height: 200px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-6">
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <h5 class="card-title">系列对比</h5>
+                        <div id="series-comparison-chart" class="chart-container" style="height: 200px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-body">
+                    <h5 class="card-title">对比分析详情</h5>
+                    <div id="comparison-details">
+                      <!-- 动态填充内容 -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 关键洞察面板 -->
+              <div class="tab-pane fade" id="insights-panel" role="tabpanel">
+                <div class="card mb-4">
+                  <div class="card-body">
+                    <h5 class="card-title">关键发现</h5>
+                    <ul id="key-insights-list" class="list-group list-group-flush">
+                      <!-- 动态填充内容 -->
+                    </ul>
+                  </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-body">
+                    <h5 class="card-title">建议行动</h5>
+                    <div id="suggested-actions">
+                      <!-- 动态填充内容 -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 图表设置模态框 -->
+<div class="modal fade" id="chart-settings-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">图表设置</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="chart-settings-form">
+          <div class="mb-3">
+            <label for="chart-title-setting" class="form-label">图表标题</label>
+            <input type="text" class="form-control" id="chart-title-setting">
+          </div>
+          
+          <div class="mb-3">
+            <label for="x-axis-label" class="form-label">X轴标签</label>
+            <input type="text" class="form-control" id="x-axis-label">
+          </div>
+          
+          <div class="mb-3">
+            <label for="y-axis-label" class="form-label">Y轴标签</label>
+            <input type="text" class="form-control" id="y-axis-label">
+          </div>
+          
+          <div class="mb-3">
+            <label for="chart-color-scheme" class="form-label">配色方案</label>
+            <select class="form-select" id="chart-color-scheme">
+              <option value="default">默认</option>
+              <option value="pastel">柔和色</option>
+              <option value="bright">明亮色</option>
+              <option value="cool">冷色调</option>
+              <option value="warm">暖色调</option>
+            </select>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="show-data-labels">
+            <label class="form-check-label" for="show-data-labels">显示数据标签</label>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="show-grid-lines">
+            <label class="form-check-label" for="show-grid-lines">显示网格线</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="apply-settings-btn">应用设置</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 导出选项模态框 -->
+<div class="modal fade" id="export-options-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">导出分析报告</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="list-group">
+          <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" id="export-image-btn">
+            导出图表为图片
+            <i class="fas fa-image"></i>
+          </button>
+          <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" id="export-pdf-btn">
+            导出为PDF报告
+            <i class="fas fa-file-pdf"></i>
+          </button>
+          <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" id="export-excel-btn">
+            导出数据为Excel
+            <i class="fas fa-file-excel"></i>
+          </button>
+          <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" id="export-json-btn">
+            导出数据为JSON
+            <i class="fas fa-file-code"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('web.static', filename='dist/charts.bundle.js') }}"></script>
+<script src="{{ url_for('web.static', filename='js/chart-analysis.js') }}"></script>
+{% endblock %} 
