@@ -3,130 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}数据指标分析平台{% endblock %}</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome 图标 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 自定义CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {% block extra_css %}{% endblock %}
+    <title>{% if title %}{{ title }} - {% endif %}数据指标分析平台</title>
+    <!-- 引入Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/css/bootstrap.min.css">
+    <!-- 引入FontAwesome图标 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入Chart.js -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.3.0/chart.min.css">
+    <!-- 引入Plotly.js -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/plotly.js/2.24.1/plotly.min.js"></script>
+    <!-- 自定义样式 -->
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-color-light: #8186f4;
+            --primary-color-dark: #4f46e5;
+            --secondary-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --sidebar-width: 280px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f9fafb;
+            color: #1e293b;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            width: var(--sidebar-width);
+            padding: 1rem;
+            background-color: #ffffff;
+            border-right: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .sidebar-sticky {
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 1rem);
+            padding-top: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .navbar-brand {
+            padding: 1rem 1rem;
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+        }
+        
+        .navbar-brand img {
+            margin-right: 0.5rem;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+        
+        .nav-link {
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: var(--primary-color-dark);
+        }
+        
+        .nav-link.active {
+            background-color: #eef2ff;
+            color: var(--primary-color-dark);
+            font-weight: 600;
+        }
+        
+        .nav-link i {
+            margin-right: 0.75rem;
+            width: 1.25rem;
+            text-align: center;
+        }
+        
+        .card {
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .card-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-color-dark);
+            border-color: var(--primary-color-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .chart-container {
+            position: relative;
+            min-height: 400px;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+        
+        .analysis-result {
+            background-color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 2rem;
+        }
+        
+        .analysis-result h4 {
+            margin-bottom: 1rem;
+            color: var(--primary-color-dark);
+        }
+        
+        .analysis-metric {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .analysis-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .analysis-change {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .analysis-change.positive {
+            color: var(--secondary-color);
+        }
+        
+        .analysis-change.negative {
+            color: var(--danger-color);
+        }
+        
+        .analysis-summary {
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+        
+        .add-item-btn {
+            margin-bottom: 1rem;
+        }
+        
+        /* 响应式布局 */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content.sidebar-shown {
+                margin-left: var(--sidebar-width);
+            }
+        }
+    </style>
+    {% block styles %}{% endblock %}
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-chart-line me-2"></i>数据指标分析平台
+    <!-- 侧边导航栏 -->
+    <div class="sidebar">
+        <div class="sidebar-sticky">
+            <!-- 品牌标志 -->
+            <a href="{{ url_for('web.index') }}" class="navbar-brand">
+                <i class="fas fa-chart-line"></i>
+                <span>数据指标分析</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'home' %}active{% endif %}" href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i>首页
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'metric_analysis' %}active{% endif %}" href="{{ url_for('metric_analysis') }}">
-                            <i class="fas fa-chart-bar me-1"></i>指标分析
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'chart_analysis' %}active{% endif %}" href="{{ url_for('chart_analysis') }}">
-                            <i class="fas fa-chart-pie me-1"></i>图表分析
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'comparison_analysis' %}active{% endif %}" href="{{ url_for('comparison_analysis') }}">
-                            <i class="fas fa-not-equal me-1"></i>对比分析
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'root_cause_analysis' %}active{% endif %}" href="{{ url_for('root_cause_analysis') }}">
-                            <i class="fas fa-network-wired me-1"></i>根因分析
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'prediction_analysis' %}active{% endif %}" href="{{ url_for('prediction_analysis') }}">
-                            <i class="fas fa-crystal-ball me-1"></i>预测分析
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'suggestion_analysis' %}active{% endif %}" href="{{ url_for('suggestion_analysis') }}">
-                            <i class="fas fa-lightbulb me-1"></i>智能建议
-                        </a>
-                    </li>
-                </ul>
-                <div class="d-flex">
-                    <div class="dropdown">
-                        <button class="btn btn-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>用户
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>设置</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-history me-2"></i>历史记录</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>退出</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- 主内容区 -->
-    <main class="container py-4">
-        <!-- 面包屑导航 -->
-        {% block breadcrumb %}
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">首页</a></li>
-                {% block breadcrumb_items %}{% endblock %}
-            </ol>
-        </nav>
-        {% endblock %}
-
-        <!-- 页面标题 -->
-        {% block page_header %}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="mb-0">{% block page_title %}页面标题{% endblock %}</h1>
-            {% block page_actions %}{% endblock %}
-        </div>
-        {% endblock %}
-
-        <!-- 页面内容 -->
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- 页脚 -->
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">© 2023 数据指标分析平台 | 版本 1.0.0</span>
-        </div>
-    </footer>
-
-    <!-- 加载动画 -->
-    <div id="loading-overlay" class="d-none">
-        <div class="spinner-container">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">加载中...</span>
-            </div>
-            <p class="mt-2">分析处理中，请稍候...</p>
+            
+            <!-- 导航菜单 -->
+            <ul class="nav flex-column mt-4">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.index' %}active{% endif %}" href="{{ url_for('web.index') }}">
+                        <i class="fas fa-home"></i>首页
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.dashboard' %}active{% endif %}" href="{{ url_for('web.dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i>仪表盘
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <h6 class="px-3 text-muted">分析功能</h6>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.trend_analysis' %}active{% endif %}" href="{{ url_for('web.trend_analysis') }}">
+                        <i class="fas fa-chart-line"></i>趋势分析
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.correlation_analysis' %}active{% endif %}" href="{{ url_for('web.correlation_analysis') }}">
+                        <i class="fas fa-chart-scatter"></i>相关性分析
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.attribution_analysis' %}active{% endif %}" href="{{ url_for('web.attribution_analysis') }}">
+                        <i class="fas fa-sitemap"></i>归因分析
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.reason_analysis' %}active{% endif %}" href="{{ url_for('web.reason_analysis') }}">
+                        <i class="fas fa-search"></i>原因分析
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <h6 class="px-3 text-muted">帮助</h6>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.api_documentation' %}active{% endif %}" href="{{ url_for('web.api_documentation') }}">
+                        <i class="fas fa-book"></i>API文档
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'web.user_guide' %}active{% endif %}" href="{{ url_for('web.user_guide') }}">
+                        <i class="fas fa-question-circle"></i>用户指南
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 自定义JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    {% block extra_js %}{% endblock %}
+    
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+        <!-- 页面标题 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">{% if title %}{{ title }}{% else %}数据指标分析平台{% endif %}</h1>
+            <button id="sidebar-toggle" class="btn btn-outline-primary d-lg-none">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- 闪现消息 -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- 主要内容区块 -->
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- 引入Bootstrap JavaScript -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.3.0/chart.umd.min.js"></script>
+    <!-- 通用JavaScript -->
+    <script>
+        // 侧边栏切换
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('show');
+            document.querySelector('.main-content').classList.toggle('sidebar-shown');
+        });
+        
+        // 工具提示初始化
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // 动态添加输入字段的通用函数
+        function addDynamicField(containerId, templateId, deleteButtonClass) {
+            // 复制模板
+            const template = document.getElementById(templateId);
+            if (!template) return;
+            
+            const clone = template.content.cloneNode(true);
+            
+            // 添加到容器
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            container.appendChild(clone);
+            
+            // 绑定删除按钮事件
+            const deleteButtons = container.querySelectorAll('.' + deleteButtonClass);
+            const lastDeleteButton = deleteButtons[deleteButtons.length - 1];
+            
+            if (lastDeleteButton) {
+                lastDeleteButton.addEventListener('click', function() {
+                    this.closest('.dynamic-item').remove();
+                });
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
 </body>
 </html> 

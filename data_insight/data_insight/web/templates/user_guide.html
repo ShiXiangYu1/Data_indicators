@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据指标分析系统 - 用户指南</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <style>
+        .guide-section {
+            margin-bottom: 30px;
+        }
+        .guide-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .guide-section h3 {
+            color: #3498db;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .step-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 5px 5px 0;
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .api-example {
+            background-color: #f7f9fb;
+            border: 1px solid #e1e4e8;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+        }
+        .tip-box {
+            background-color: #e8f4f8;
+            border-left: 4px solid #4ac1f7;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .warning-box {
+            background-color: #fff8e6;
+            border-left: 4px solid #f0ad4e;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+        .toc ul li {
+            margin-bottom: 8px;
+        }
+        .toc a {
+            text-decoration: none;
+            color: #3498db;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-primary text-white p-4">
+        <div class="container">
+            <h1>数据指标分析系统</h1>
+            <p class="lead">用户指南</p>
+        </div>
+    </header>
+    
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-md-3">
+                <nav id="toc" class="sticky-top pt-4">
+                    <div class="toc">
+                        <h4>目录</h4>
+                        <ul>
+                            <li><a href="#introduction">系统介绍</a></li>
+                            <li><a href="#getting-started">快速入门</a></li>
+                            <li><a href="#trend-analysis">趋势分析</a></li>
+                            <li><a href="#attribution-analysis">归因分析</a></li>
+                            <li><a href="#root-cause-analysis">根因分析</a></li>
+                            <li><a href="#correlation-analysis">相关性分析</a></li>
+                            <li><a href="#prediction-analysis">预测分析</a></li>
+                            <li><a href="#metric-analysis">指标分析</a></li>
+                            <li><a href="#chart-analysis">图表分析</a></li>
+                            <li><a href="#export-results">结果导出</a></li>
+                            <li><a href="#api-integration">API集成</a></li>
+                            <li><a href="#faq">常见问题</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+            
+            <div class="col-md-9">
+                <section id="introduction" class="guide-section">
+                    <h2>系统介绍</h2>
+                    <p>数据指标分析系统是一个功能强大的分析工具，专为数据分析师、产品经理和业务决策者设计。系统提供多种高级分析功能，帮助用户深入理解数据指标的变化趋势、影响因素和预测未来走势。</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">趋势分析</h5>
+                                    <p class="card-text">识别时间序列数据的增长、下降、波动和周期模式，理解指标的历史变化规律。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">归因分析</h5>
+                                    <p class="card-text">量化各个因素对指标变化的贡献，明确主要影响因素及其影响程度。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">根因分析</h5>
+                                    <p class="card-text">挖掘指标变化的深层次原因，构建因果关系网络，追踪问题的源头。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">相关性分析</h5>
+                                    <p class="card-text">发现指标之间的关联关系，包括同向变化、反向变化和滞后效应等。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">预测分析</h5>
+                                    <p class="card-text">基于历史数据预测指标未来走势，提前识别潜在风险和机会。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">指标分析</h5>
+                                    <p class="card-text">全面分析单个指标的特征和变化，比较多个指标间的差异和关系。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="getting-started" class="guide-section">
+                    <h2>快速入门</h2>
+                    <p>开始使用数据指标分析系统只需几个简单的步骤：</p>
+                    
+                    <div class="step-box">
+                        <span class="step-number">1</span>
+                        <strong>注册账号</strong> - 访问系统首页，点击"注册"按钮，填写基本信息并创建账号。
+                    </div>
+                    
+                    <div class="step-box">
+                        <span class="step-number">2</span>
+                        <strong>准备数据</strong> - 准备需要分析的指标数据，支持CSV、Excel和JSON格式导入。
+                    </div>
+                    
+                    <div class="step-box">
+                        <span class="step-number">3</span>
+                        <strong>导入数据</strong> - 在系统中选择"导入数据"功能，上传准备好的数据文件。
+                    </div>
+                    
+                    <div class="step-box">
+                        <span class="step-number">4</span>
+                        <strong>选择分析类型</strong> - 根据需求选择合适的分析类型，如趋势分析、归因分析等。
+                    </div>
+                    
+                    <div class="step-box">
+                        <span class="step-number">5</span>
+                        <strong>查看结果</strong> - 系统将自动分析数据并生成分析结果，包括图表、数据表和文字解读。
+                    </div>
+                    
+                    <div class="step-box">
+                        <span class="step-number">6</span>
+                        <strong>导出结果</strong> - 可以将分析结果导出为PDF、Excel或CSV格式，方便分享和存档。
+                    </div>
+                    
+                    <div class="tip-box mt-4">
+                        <strong>提示：</strong> 首次使用系统时，建议查看首页的"示例分析"，了解各类分析的特点和适用场景。
+                    </div>
+                </section>
+                
+                <section id="trend-analysis" class="guide-section">
+                    <h2>趋势分析</h2>
+                    <p>趋势分析帮助您识别时间序列数据中的变化模式，包括增长趋势、下降趋势、周期性变化和季节性模式等。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>自动识别线性、指数和周期性趋势</li>
+                        <li>计算增长率、环比和同比变化</li>
+                        <li>检测趋势拐点和异常值</li>
+                        <li>提供季节性分解，区分趋势、季节和随机成分</li>
+                        <li>生成趋势预测和预警</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"趋势分析"</li>
+                        <li>上传包含时间戳和指标值的数据，或选择已导入的数据集</li>
+                        <li>选择时间粒度（日、周、月、季、年）</li>
+                        <li>选择分析方法（自动选择、线性回归、指数平滑等）</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                    
+                    <h3>API示例</h3>
+                    <div class="api-example">
+<pre>POST /api/v1/trend/analyze
+Content-Type: application/json
+
+{
+  "metric_name": "月活用户数",
+  "values": [1200, 1250, 1400, 1350, 1500, 1600, 1550, 1700, 1850, 1900],
+  "timestamps": ["2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", 
+                "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01"],
+  "trend_method": "auto",
+  "seasonality": true,
+  "detect_inflections": true
+}</pre>
+                    </div>
+                </section>
+                
+                <section id="attribution-analysis" class="guide-section">
+                    <h2>归因分析</h2>
+                    <p>归因分析帮助您量化各个因素对指标变化的贡献，明确主要影响因素及其影响程度。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>计算各维度对指标变化的贡献率</li>
+                        <li>支持多种归因模型，如线性归因、拉氏归因等</li>
+                        <li>提供交叉维度分析，揭示维度组合的影响</li>
+                        <li>可视化归因结果，包括瀑布图、漏斗图等</li>
+                        <li>自动生成归因分析报告和关键发现</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"归因分析"</li>
+                        <li>上传包含目标指标和维度数据的数据集</li>
+                        <li>选择当前周期和对比周期</li>
+                        <li>选择要分析的维度（如渠道、地区、用户类型等）</li>
+                        <li>选择归因模型</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                    
+                    <div class="warning-box">
+                        <strong>注意：</strong> 归因分析需要足够的数据样本才能得到可靠结果。建议每个维度至少有30个样本点。
+                    </div>
+                </section>
+                
+                <section id="root-cause-analysis" class="guide-section">
+                    <h2>根因分析</h2>
+                    <p>根因分析帮助您挖掘指标变化的深层次原因，构建因果关系网络，追踪问题的源头。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>构建指标间的因果关系图</li>
+                        <li>多层次分析影响路径</li>
+                        <li>计算各原因的影响程度和置信度</li>
+                        <li>识别关键影响节点和瓶颈</li>
+                        <li>提供问题根源的可视化展示</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"根因分析"</li>
+                        <li>选择需要分析的异常指标</li>
+                        <li>设置分析时间范围</li>
+                        <li>选择相关联的指标</li>
+                        <li>设置分析深度（1-3层）</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                </section>
+                
+                <section id="correlation-analysis" class="guide-section">
+                    <h2>相关性分析</h2>
+                    <p>相关性分析帮助您发现指标之间的关联关系，包括同向变化、反向变化和滞后效应等。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>计算指标间的皮尔逊、斯皮尔曼和肯德尔相关系数</li>
+                        <li>分析时间滞后效应，识别领先和滞后指标</li>
+                        <li>提供相关性热力图和网络图</li>
+                        <li>自动识别强相关指标组和异常相关关系</li>
+                        <li>计算相关性的统计显著性</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"相关性分析"</li>
+                        <li>上传包含多个指标时间序列的数据集，或选择已导入的数据</li>
+                        <li>选择主要指标和次要指标</li>
+                        <li>选择相关性计算方法</li>
+                        <li>设置最大滞后期数</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                    
+                    <div class="tip-box">
+                        <strong>提示：</strong> 相关性不等于因果关系。高相关性只表明两个指标之间存在统计关联，不一定表示一个指标导致另一个指标的变化。
+                    </div>
+                </section>
+                
+                <section id="prediction-analysis" class="guide-section">
+                    <h2>预测分析</h2>
+                    <p>预测分析帮助您基于历史数据预测指标未来走势，提前识别潜在风险和机会。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>支持多种预测模型，如ARIMA、指数平滑、Prophet等</li>
+                        <li>提供预测置信区间和预测精度指标</li>
+                        <li>支持多种场景的预测，如销售预测、用户增长预测等</li>
+                        <li>自动考虑季节性和趋势因素</li>
+                        <li>支持"假设情景"分析，评估不同条件下的预测结果</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"预测分析"</li>
+                        <li>上传包含时间序列数据的数据集，或选择已导入的数据</li>
+                        <li>选择预测指标和时间粒度</li>
+                        <li>设置预测时间长度（如未来30天、12周、6个月等）</li>
+                        <li>选择预测模型或使用"自动选择"</li>
+                        <li>点击"开始预测"按钮</li>
+                    </ol>
+                </section>
+                
+                <section id="metric-analysis" class="guide-section">
+                    <h2>指标分析</h2>
+                    <p>指标分析提供全面的单指标分析功能，帮助您深入理解指标的特性、变化和健康状况。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>计算指标的基本统计量和分布特征</li>
+                        <li>分析指标的变化趋势和波动性</li>
+                        <li>检测异常值和突变点</li>
+                        <li>提供多维度拆解分析</li>
+                        <li>生成指标健康评分和建议</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"指标分析"</li>
+                        <li>输入指标名称、当前值和历史值</li>
+                        <li>设置指标单位、时间周期和目标值</li>
+                        <li>添加维度数据（可选）</li>
+                        <li>选择分析选项（包括预测、分解等）</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                    
+                    <h3>API示例</h3>
+                    <div class="api-example">
+<pre>POST /api/v1/analyze
+Content-Type: application/json
+
+{
+  "name": "转化率",
+  "value": 3.5,
+  "previous_value": 3.2,
+  "unit": "%",
+  "time_period": "day",
+  "timestamp": "2023-10-15",
+  "historical_values": [3.1, 3.0, 3.2, 3.3, 3.1, 3.4, 3.2],
+  "historical_times": ["2023-10-08", "2023-10-09", "2023-10-10", "2023-10-11", 
+                       "2023-10-12", "2023-10-13", "2023-10-14"],
+  "target_value": 4.0,
+  "threshold": 2.5,
+  "dimensions": {
+    "channel": {"organic": 4.2, "paid": 2.8, "social": 3.9, "email": 5.1},
+    "device": {"desktop": 4.3, "mobile": 3.0, "tablet": 3.8}
+  },
+  "include_forecast": true,
+  "include_decomposition": true
+}</pre>
+                    </div>
+                </section>
+                
+                <section id="chart-analysis" class="guide-section">
+                    <h2>图表分析</h2>
+                    <p>图表分析帮助您自动解读数据可视化图表，提取关键信息和洞察。</p>
+                    
+                    <h3>功能特点</h3>
+                    <ul>
+                        <li>支持多种图表类型的分析，如折线图、柱状图、饼图等</li>
+                        <li>自动识别图表趋势、模式和异常</li>
+                        <li>提取图表中的关键信息点</li>
+                        <li>生成图表的文字解读</li>
+                        <li>提供图表优化建议</li>
+                    </ul>
+                    
+                    <h3>使用方法</h3>
+                    <ol>
+                        <li>在左侧导航栏选择"图表分析"</li>
+                        <li>上传图表图片或输入图表数据</li>
+                        <li>选择图表类型</li>
+                        <li>设置图表元素（如轴标签、图例等）</li>
+                        <li>选择分析深度</li>
+                        <li>点击"开始分析"按钮</li>
+                    </ol>
+                </section>
+                
+                <section id="export-results" class="guide-section">
+                    <h2>结果导出</h2>
+                    <p>系统支持将分析结果导出为多种格式，方便分享和存档。</p>
+                    
+                    <h3>支持的导出格式</h3>
+                    <ul>
+                        <li>PDF报告 - 包含完整的分析结果、图表和解读</li>
+                        <li>Excel工作簿 - 包含原始数据和分析数据表</li>
+                        <li>CSV文件 - 适合后续数据处理</li>
+                        <li>JSON数据 - 适合API集成</li>
+                    </ul>
+                    
+                    <h3>导出方法</h3>
+                    <ol>
+                        <li>完成分析后，在结果页面点击"导出"按钮</li>
+                        <li>选择导出格式</li>
+                        <li>根据需要自定义导出选项（如是否包含原始数据、图表格式等）</li>
+                        <li>点击"确认导出"按钮</li>
+                        <li>下载生成的文件</li>
+                    </ol>
+                    
+                    <h3>API示例</h3>
+                    <div class="api-example">
+<pre>POST /api/v1/export/result
+Content-Type: application/json
+
+{
+  "format": "pdf",
+  "data": {
+    // 分析结果数据
+  },
+  "filename": "转化率分析_202310",
+  "include_metadata": true,
+  "page_title": "转化率分析报告 - 2023年10月",
+  "page_orientation": "portrait"
+}</pre>
+                    </div>
+                </section>
+                
+                <section id="api-integration" class="guide-section">
+                    <h2>API集成</h2>
+                    <p>系统提供RESTful API接口，支持与其他系统集成和自动化分析流程。</p>
+                    
+                    <h3>API基本信息</h3>
+                    <ul>
+                        <li>基础URL: <code>https://api.data-insight.example.com</code></li>
+                        <li>API版本: v1</li>
+                        <li>认证方式: API令牌、HMAC签名</li>
+                        <li>响应格式: JSON</li>
+                        <li>速率限制: 每小时1000次请求</li>
+                    </ul>
+                    
+                    <h3>主要API端点</h3>
+                    <ul>
+                        <li><code>/api/v1/analyze</code> - 指标分析</li>
+                        <li><code>/api/v1/trend/analyze</code> - 趋势分析</li>
+                        <li><code>/api/v1/attribution</code> - 归因分析</li>
+                        <li><code>/api/v1/root-cause</code> - 根因分析</li>
+                        <li><code>/api/v1/correlation</code> - 相关性分析</li>
+                        <li><code>/api/v1/prediction</code> - 预测分析</li>
+                        <li><code>/api/v1/export/result</code> - 导出结果</li>
+                    </ul>
+                    
+                    <h3>集成步骤</h3>
+                    <ol>
+                        <li>在"账户设置"中生成API密钥</li>
+                        <li>使用HTTP客户端（如curl、Postman）或编程语言SDK发送请求</li>
+                        <li>在请求头中添加认证信息</li>
+                        <li>发送带有正确参数的请求到相应端点</li>
+                        <li>处理返回的响应</li>
+                    </ol>
+                    
+                    <div class="tip-box">
+                        <strong>提示：</strong> 完整的API文档可以在<a href="/api/docs">API文档</a>页面查看。
+                    </div>
+                </section>
+                
+                <section id="faq" class="guide-section">
+                    <h2>常见问题</h2>
+                    
+                    <div class="accordion" id="faqAccordion">
+                        <div class="card mb-2">
+                            <div class="card-header" id="faqOne">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne">
+                                        系统支持哪些数据格式？
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseOne" class="collapse show" aria-labelledby="faqOne" data-parent="#faqAccordion">
+                                <div class="card-body">
+                                    系统支持多种数据格式，包括CSV、Excel (XLSX/XLS)、JSON和标准数据库导出格式。上传数据时，系统会自动识别格式并解析数据。对于CSV文件，支持各种分隔符（逗号、制表符、分号等）和编码（UTF-8、GBK等）。
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-2">
+                            <div class="card-header" id="faqTwo">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo">
+                                        如何确保数据安全？
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseTwo" class="collapse" aria-labelledby="faqTwo" data-parent="#faqAccordion">
+                                <div class="card-body">
+                                    系统采用多层次的安全措施保护数据：所有数据传输使用SSL/TLS加密；数据存储采用AES-256加密；访问控制基于角色的权限管理；系统定期进行安全审计和渗透测试；遵循数据隐私法规要求，如GDPR和CCPA。此外，用户可以设置数据保留策略，过期数据将自动删除。
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-2">
+                            <div class="card-header" id="faqThree">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree">
+                                        分析结果准确性如何保证？
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseThree" class="collapse" aria-labelledby="faqThree" data-parent="#faqAccordion">
+                                <div class="card-body">
+                                    系统通过多种方式保证分析结果的准确性：使用经过验证的统计方法和算法；适用数据质量检查，过滤异常值和缺失值；提供置信区间和统计显著性指标；使用交叉验证和模型评估指标；对历史分析结果进行回测验证。每个分析结果都包含数据质量评分和可信度指标，帮助用户评估结果的可靠性。
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-2">
+                            <div class="card-header" id="faqFour">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseFour">
+                                        系统是否支持批量分析？
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseFour" class="collapse" aria-labelledby="faqFour" data-parent="#faqAccordion">
+                                <div class="card-body">
+                                    是的，系统支持批量分析功能。您可以通过以下方式进行批量分析：上传包含多个指标的数据集，选择"批量分析"功能；使用API批量提交分析请求；创建分析计划，定期自动执行一组分析任务；使用模板功能，将相同的分析配置应用于不同的数据集。批量分析结果可以合并导出或单独查看。
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-2">
+                            <div class="card-header" id="faqFive">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseFive">
+                                        如何处理大型数据集？
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="collapseFive" class="collapse" aria-labelledby="faqFive" data-parent="#faqAccordion">
+                                <div class="card-body">
+                                    对于大型数据集（超过100MB），建议使用以下方法：使用数据采样功能，系统可以自动提取代表性样本；启用增量分析模式，只处理新增数据；使用数据压缩上传，减少传输时间；对于特别大的数据集（GB级别），可以使用API分块上传或直接连接到数据源（如数据库、数据仓库）；使用异步分析功能，后台处理大型数据集，完成后通知用户。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>数据指标分析系统</h5>
+                    <p>版本 1.0.0</p>
+                </div>
+                <div class="col-md-6 text-md-right">
+                    <p>有问题？<a href="mailto:support@data-insight.example.com" class="text-white">联系支持团队</a></p>
+                    <p>© 2023 数据指标分析系统. 保留所有权利.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="{{ url_for('static', path='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', path='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // 平滑滚动到锚点
+        $(document).ready(function() {
+            $('a[href^="#"]').on('click', function(e) {
+                e.preventDefault();
+                
+                var target = this.hash;
+                var $target = $(target);
+                
+                $('html, body').stop().animate({
+                    'scrollTop': $target.offset().top - 80
+                }, 500, 'swing', function() {
+                    window.location.hash = target;
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

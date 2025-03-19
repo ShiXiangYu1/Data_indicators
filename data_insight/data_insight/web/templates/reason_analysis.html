@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}原因分析 - 数据指标分析平台{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{{ url_for('web.index') }}">首页</a></li>
+<li class="breadcrumb-item active">原因分析</li>
+{% endblock %}
+
+{% block page_title %}原因分析{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <!-- 功能介绍卡片 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-search text-warning fa-2x"></i>
+                    </div>
+                    <div>
+                        <h3>数据指标原因分析</h3>
+                        <p class="text-muted mb-0">挖掘数据异常或变化的潜在原因，通过多维分析和自动检测算法，揭示数据变化背后的关键因素。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 输入表单 -->
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>输入数据</h4>
+            </div>
+            <div class="card-body">
+                <form id="reasonAnalysisForm" method="post" action="{{ url_for('web.reason_analysis') }}">
+                    <!-- 指标基本信息 -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">指标基本信息</h5>
+                        <div class="mb-3">
+                            <label for="metric_name" class="form-label">指标名称</label>
+                            <input type="text" class="form-control" id="metric_name" name="metric_name" placeholder="例如：日活跃用户数" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="current_period" class="form-label">当前时间段</label>
+                                    <input type="text" class="form-control" id="current_period" name="current_period" placeholder="例如：2023年3月" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="current_value" class="form-label">当前值</label>
+                                    <input type="number" step="any" class="form-control" id="current_value" name="current_value" placeholder="例如：10000" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="previous_period" class="form-label">上一时间段</label>
+                                    <input type="text" class="form-control" id="previous_period" name="previous_period" placeholder="例如：2023年2月" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="previous_value" class="form-label">上一时间段值</label>
+                                    <input type="number" step="any" class="form-control" id="previous_value" name="previous_value" placeholder="例如：8500" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 历史数据（可选） -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h5 class="mb-0">历史数据（可选）</h5>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="includeHistoricalData">
+                                <label class="form-check-label" for="includeHistoricalData">包含历史数据</label>
+                            </div>
+                        </div>
+                        
+                        <div id="historicalDataSection" style="display: none;">
+                            <div class="mb-3">
+                                <label for="historical_periods" class="form-label">时间段列表（逗号分隔）</label>
+                                <input type="text" class="form-control" id="historical_periods" name="historical_periods" placeholder="例如：2023年1月,2022年12月,2022年11月">
+                            </div>
+                            <div class="mb-3">
+                                <label for="historical_data" class="form-label">数值列表（逗号分隔）</label>
+                                <input type="text" class="form-control" id="historical_data" name="historical_data" placeholder="例如：8000,7800,7600">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 相关指标（可选） -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h5 class="mb-0">相关指标（可选）</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addRelatedMetric">
+                                <i class="fas fa-plus me-1"></i>添加指标
+                            </button>
+                        </div>
+                        <div id="relatedMetricsContainer">
+                            <!-- 相关指标将通过JavaScript动态添加 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 分析选项 -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">分析选项</h5>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="consider_seasonality" name="consider_seasonality" checked>
+                                <label class="form-check-label" for="consider_seasonality">考虑季节性因素</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="consider_external_factors" name="consider_external_factors" checked>
+                                <label class="form-check-label" for="consider_external_factors">考虑外部因素</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 提交按钮 -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-secondary mb-2" id="loadExampleData">
+                            <i class="fas fa-file-import me-1"></i>加载示例数据
+                        </button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-search me-1"></i>进行原因分析
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析结果 -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>分析结果</h4>
+                {% if chart_data %}
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="exportResults">
+                        <i class="fas fa-file-export me-1"></i>导出结果
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+                </div>
+                {% elif not chart_data %}
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-chart-bar text-muted fa-5x"></i>
+                    </div>
+                    <h5 class="text-muted">请输入数据并点击"进行原因分析"</h5>
+                    <p class="text-muted">分析结果将显示在此处</p>
+                </div>
+                {% else %}
+                <!-- 指标变化概览 -->
+                <div class="analysis-result mb-4">
+                    <h4>指标变化概览</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="analysis-metric">{{ chart_data_obj.metric_name }}</p>
+                            <div class="d-flex align-items-end mb-2">
+                                <span class="analysis-value">{{ chart_data_obj.current_value|round(2) }}</span>
+                                <span class="ms-2 text-muted">({{ chart_data_obj.time_period }})</span>
+                            </div>
+                            <div class="analysis-change {% if chart_data_obj.change_value > 0 %}positive{% else %}negative{% endif %}">
+                                {% if chart_data_obj.change_value > 0 %}
+                                    <i class="fas fa-arrow-up me-1"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down me-1"></i>
+                                {% endif %}
+                                {{ chart_data_obj.change_value|abs|round(2) }} 
+                                ({{ chart_data_obj.change_percentage|abs|round(2) }}%)
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container" style="height: 150px;">
+                                <div id="changeChart" style="width: 100%; height: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 历史趋势图表 -->
+                {% if chart_data_obj.historical %}
+                <div class="analysis-result mb-4">
+                    <h4>历史趋势分析</h4>
+                    <div class="chart-container">
+                        <div id="historicalChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 相关指标变化 -->
+                {% if chart_data_obj.related_metrics %}
+                <div class="analysis-result mb-4">
+                    <h4>相关指标变化</h4>
+                    <div class="chart-container">
+                        <div id="relatedMetricsChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 可能原因分析 -->
+                <div class="analysis-result mb-4">
+                    <h4>可能原因分析</h4>
+                    <div class="mb-3">
+                        <div class="progress mb-2" style="height: 10px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ chart_data_obj.confidence }}%;" aria-valuenow="{{ chart_data_obj.confidence }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">分析置信度: {{ chart_data_obj.confidence }}%</small>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for reason in chart_data_obj.reasons %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ reason.title }}</div>
+                                {{ reason.description }}
+                            </div>
+                            <span class="badge bg-warning rounded-pill ms-2">{{ reason.confidence }}%</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- 建议行动计划 -->
+                {% if result and result.suggested_actions %}
+                <div class="analysis-result">
+                    <h4>建议行动计划</h4>
+                    <ol class="list-group list-group-numbered">
+                        {% for action in result.suggested_actions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ action.title }}</div>
+                                {{ action.description }}
+                            </div>
+                            <span class="badge bg-success rounded-pill ms-2">{{ action.priority }}</span>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 切换历史数据区域显示
+        $('#includeHistoricalData').change(function() {
+            if($(this).is(':checked')) {
+                $('#historicalDataSection').slideDown();
+            } else {
+                $('#historicalDataSection').slideUp();
+            }
+        });
+        
+        // 添加相关指标
+        $('#addRelatedMetric').click(function() {
+            const index = $('#relatedMetricsContainer .related-metric-group').length;
+            const relatedMetricHtml = `
+                <div class="related-metric-group mb-3 p-3 border rounded bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">相关指标 #${index + 1}</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-related-metric">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">指标名称</label>
+                        <input type="text" class="form-control" name="related_name[]" placeholder="例如：新增用户数" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <label class="form-label">当前值</label>
+                                <input type="number" step="any" class="form-control" name="related_current_value[]" placeholder="例如：2000" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <label class="form-label">上一时间段值</label>
+                                <input type="number" step="any" class="form-control" name="related_previous_value[]" placeholder="例如：1800" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('#relatedMetricsContainer').append(relatedMetricHtml);
+        });
+        
+        // 删除相关指标
+        $(document).on('click', '.remove-related-metric', function() {
+            $(this).closest('.related-metric-group').remove();
+        });
+        
+        // 加载示例数据
+        $('#loadExampleData').click(function() {
+            $('#metric_name').val('日活跃用户数');
+            $('#current_period').val('2023年3月');
+            $('#current_value').val('10000');
+            $('#previous_period').val('2023年2月');
+            $('#previous_value').val('8500');
+            
+            // 设置历史数据
+            $('#includeHistoricalData').prop('checked', true).trigger('change');
+            $('#historical_periods').val('2023年1月,2022年12月,2022年11月,2022年10月,2022年9月');
+            $('#historical_data').val('8000,7800,7600,7900,8200');
+            
+            // 添加两个相关指标
+            $('#relatedMetricsContainer').empty();
+            $('#addRelatedMetric').click();
+            $('#relatedMetricsContainer input[name="related_name[]"]').val('新增用户数');
+            $('#relatedMetricsContainer input[name="related_current_value[]"]').val('2000');
+            $('#relatedMetricsContainer input[name="related_previous_value[]"]').val('1800');
+            
+            $('#addRelatedMetric').click();
+            $('#relatedMetricsContainer .related-metric-group:last-child input[name="related_name[]"]').val('页面访问量');
+            $('#relatedMetricsContainer .related-metric-group:last-child input[name="related_current_value[]"]').val('50000');
+            $('#relatedMetricsContainer .related-metric-group:last-child input[name="related_previous_value[]"]').val('45000');
+        });
+        
+        // 导出结果
+        $('#exportResults').click(function() {
+            alert('导出功能将在后续版本中实现');
+        });
+        
+        {% if chart_data %}
+        // 解析图表数据
+        const chartData = {{ chart_data|safe }};
+        
+        // 渲染变化图表
+        const changeChartData = [
+            {
+                type: 'bar',
+                x: [chartData.previous_time_period, chartData.time_period],
+                y: [chartData.previous_value, chartData.current_value],
+                marker: {
+                    color: ['rgba(99, 102, 241, 0.7)', 'rgba(245, 158, 11, 0.7)']
+                }
+            }
+        ];
+        
+        const changeChartLayout = {
+            margin: { t: 10, r: 10, l: 40, b: 40 },
+            xaxis: { fixedrange: true },
+            yaxis: { fixedrange: true }
+        };
+        
+        Plotly.newPlot('changeChart', changeChartData, changeChartLayout, {responsive: true, displayModeBar: false});
+        
+        // 渲染历史趋势图表
+        if (chartData.historical) {
+            const historicalChartData = [
+                {
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    x: [...chartData.historical.periods, chartData.time_period],
+                    y: [...chartData.historical.values, chartData.current_value],
+                    line: { color: 'rgba(245, 158, 11, 0.7)', width: 3 },
+                    marker: { size: 8, color: 'rgba(245, 158, 11, 1)' }
+                }
+            ];
+            
+            const historicalChartLayout = {
+                margin: { t: 10, r: 10, l: 50, b: 50 },
+                xaxis: { title: '时间段', fixedrange: true },
+                yaxis: { title: chartData.metric_name, fixedrange: true }
+            };
+            
+            Plotly.newPlot('historicalChart', historicalChartData, historicalChartLayout, {responsive: true, displayModeBar: false});
+        }
+        
+        // 渲染相关指标图表
+        if (chartData.related_metrics && chartData.related_metrics.length > 0) {
+            const relatedNames = chartData.related_metrics.map(m => m.name);
+            const currentValues = chartData.related_metrics.map(m => m.current_value);
+            const previousValues = chartData.related_metrics.map(m => m.previous_value);
+            const changePercentages = chartData.related_metrics.map(m => m.change_percentage);
+            
+            const relatedMetricsChartData = [
+                {
+                    type: 'bar',
+                    name: '变化百分比',
+                    x: relatedNames,
+                    y: changePercentages,
+                    marker: {
+                        color: changePercentages.map(p => p >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)')
+                    }
+                }
+            ];
+            
+            const relatedMetricsChartLayout = {
+                margin: { t: 30, r: 10, l: 50, b: 80 },
+                xaxis: { title: '相关指标', fixedrange: true },
+                yaxis: { title: '变化百分比 (%)', fixedrange: true },
+                bargap: 0.3
+            };
+            
+            Plotly.newPlot('relatedMetricsChart', relatedMetricsChartData, relatedMetricsChartLayout, {responsive: true, displayModeBar: false});
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %} 

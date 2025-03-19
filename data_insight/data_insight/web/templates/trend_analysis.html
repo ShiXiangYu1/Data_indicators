@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .trend-chart {
+        width: 100%;
+        height: 450px;
+    }
+    
+    .trend-detail {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .inflection-point {
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        border-left: 3px solid var(--primary-color);
+        background-color: #eef2ff;
+    }
+    
+    .inflection-point.positive {
+        border-left-color: var(--secondary-color);
+    }
+    
+    .inflection-point.negative {
+        border-left-color: var(--danger-color);
+    }
+    
+    .data-input-container {
+        position: relative;
+    }
+    
+    .data-format-hint {
+        position: absolute;
+        right: 0.5rem;
+        top: 0.5rem;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    
+    .trend-method-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    
+    .trend-method-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .trend-method-card.selected {
+        border-color: var(--primary-color);
+        background-color: #eef2ff;
+    }
+    
+    .trend-method-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #eef2ff;
+        border-radius: 50%;
+        margin-bottom: 0.75rem;
+    }
+    
+    .dynamic-item {
+        position: relative;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background-color: #f9fafb;
+    }
+    
+    .remove-item-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    .sample-data-btn {
+        position: absolute;
+        right: 1rem;
+        top: 2.5rem;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- 分析表单卡片 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">趋势分析</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#analysisPanelCollapse" aria-expanded="true">
+                <i class="fas fa-angle-up"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="analysisPanelCollapse">
+            <div class="card-body">
+                <form id="trendAnalysisForm" method="post" action="{{ url_for('web.trend_analysis') }}">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="metricName" class="form-label">指标名称</label>
+                                <input type="text" class="form-control" id="metricName" name="metric_name" required placeholder="例如：日活跃用户数">
+                            </div>
+                            
+                            <div class="mb-3 data-input-container">
+                                <label for="metricValues" class="form-label">指标数据</label>
+                                <span class="data-format-hint">一行一个数值</span>
+                                <textarea class="form-control" id="metricValues" name="values" rows="6" required placeholder="10.5&#10;12.3&#10;14.7&#10;13.2&#10;15.9&#10;17.8"></textarea>
+                                <button type="button" class="btn btn-sm btn-link sample-data-btn" id="loadSampleDataBtn">载入示例数据</button>
+                            </div>
+                            
+                            <div class="mb-3 data-input-container">
+                                <label for="timestamps" class="form-label">时间戳</label>
+                                <span class="data-format-hint">一行一个日期，与指标数据行数一致</span>
+                                <textarea class="form-control" id="timestamps" name="timestamps" rows="6" required placeholder="2023-01-01&#10;2023-01-02&#10;2023-01-03&#10;2023-01-04&#10;2023-01-05&#10;2023-01-06"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">趋势分析方法</label>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card trend-method-card selected" data-method="auto">
+                                            <div class="card-body text-center">
+                                                <div class="trend-method-icon mx-auto">
+                                                    <i class="fas fa-magic text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">自动选择</h5>
+                                                <p class="card-text small text-muted">根据数据特性自动选择最合适的方法</p>
+                                                <input type="radio" name="trend_method" value="auto" checked class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card trend-method-card" data-method="linear">
+                                            <div class="card-body text-center">
+                                                <div class="trend-method-icon mx-auto">
+                                                    <i class="fas fa-chart-line text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">线性趋势</h5>
+                                                <p class="card-text small text-muted">适用于具有线性特征的数据</p>
+                                                <input type="radio" name="trend_method" value="linear" class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card trend-method-card" data-method="exp">
+                                            <div class="card-body text-center">
+                                                <div class="trend-method-icon mx-auto">
+                                                    <i class="fas fa-chart-area text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">指数平滑</h5>
+                                                <p class="card-text small text-muted">适用于具有季节性的数据</p>
+                                                <input type="radio" name="trend_method" value="exp" class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card trend-method-card" data-method="lowess">
+                                            <div class="card-body text-center">
+                                                <div class="trend-method-icon mx-auto">
+                                                    <i class="fas fa-wave-square text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">LOWESS平滑</h5>
+                                                <p class="card-text small text-muted">适用于非线性、波动较大的数据</p>
+                                                <input type="radio" name="trend_method" value="lowess" class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">高级选项</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="seasonality" name="seasonality" checked>
+                                            <label class="form-check-label" for="seasonality">分析季节性</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="detectInflections" name="detect_inflections" checked>
+                                            <label class="form-check-label" for="detectInflections">检测拐点</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                                    <i class="fas fa-chart-line me-2"></i>开始分析
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 分析结果卡片，初始隐藏 -->
+    {% if result %}
+    <div class="card mt-4" id="resultCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">分析结果: {{ result.metric_name }}</h2>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="exportResultBtn">
+                    <i class="fas fa-download me-1"></i>导出
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#resultPanelCollapse" aria-expanded="true">
+                    <i class="fas fa-angle-up"></i>
+                </button>
+            </div>
+        </div>
+        <div class="collapse show" id="resultPanelCollapse">
+            <div class="card-body">
+                <!-- 趋势图表 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">趋势图表</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="trendChart" class="trend-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 趋势摘要 -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">总体趋势</h5>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="text-{{ result.trend.direction == 'increasing' ? 'success' : (result.trend.direction == 'decreasing' ? 'danger' : 'warning') }}">
+                                    <i class="fas fa-{{ result.trend.direction == 'increasing' ? 'arrow-up' : (result.trend.direction == 'decreasing' ? 'arrow-down' : 'minus') }} me-2"></i>
+                                    {{ result.trend.direction == 'increasing' ? '上升趋势' : (result.trend.direction == 'decreasing' ? '下降趋势' : '稳定趋势') }}
+                                </h3>
+                                <div class="mb-3">
+                                    <span class="text-muted">斜率:</span>
+                                    <span class="fw-bold ms-2">{{ result.trend.slope | round(4) }}</span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="text-muted">平均增长率:</span>
+                                    <span class="fw-bold ms-2">{{ (result.trend.growth_rate * 100) | round(2) }}%</span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="text-muted">统计显著性:</span>
+                                    <span class="fw-bold ms-2">
+                                        {% if result.trend.p_value < 0.01 %}
+                                            <span class="text-success">高度显著 (p<0.01)</span>
+                                        {% elif result.trend.p_value < 0.05 %}
+                                            <span class="text-success">显著 (p<0.05)</span>
+                                        {% elif result.trend.p_value < 0.1 %}
+                                            <span class="text-warning">边际显著 (p<0.1)</span>
+                                        {% else %}
+                                            <span class="text-danger">不显著 (p={{ result.trend.p_value | round(3) }})</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-muted">分析方法:</span>
+                                    <span class="fw-bold ms-2">{{ result.trend.method }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">季节性分析</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if result.seasonality and result.seasonality.strength > 0 %}
+                                    <h4>检测到季节性模式</h4>
+                                    <div class="mb-3">
+                                        <span class="text-muted">季节性强度:</span>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ (result.seasonality.strength * 100) | round(1) }}%;" 
+                                                aria-valuenow="{{ (result.seasonality.strength * 100) | round(1) }}" aria-valuemin="0" aria-valuemax="100">
+                                                {{ (result.seasonality.strength * 100) | round(1) }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <span class="text-muted">季节周期:</span>
+                                        <span class="fw-bold ms-2">{{ result.seasonality.period }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted">季节模式:</span>
+                                        <p class="mt-2">{{ result.seasonality.pattern }}</p>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center my-5">
+                                        <i class="fas fa-info-circle text-muted fs-3 mb-3"></i>
+                                        <p>未检测到明显的季节性模式</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">趋势分布</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="distributionChart" class="trend-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 拐点分析 -->
+                {% if result.inflections and result.inflections|length > 0 %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">拐点分析</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>共检测到 {{ result.inflections|length }} 个趋势拐点：</p>
+                                {% for inflection in result.inflections %}
+                                <div class="inflection-point {{ inflection.direction == 'increasing' ? 'positive' : 'negative' }}">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <i class="fas fa-{{ inflection.direction == 'increasing' ? 'arrow-up text-success' : 'arrow-down text-danger' }} me-2"></i>
+                                            <strong>{{ inflection.date }}</strong>：
+                                            从{{ inflection.before_direction == 'increasing' ? '上升' : (inflection.before_direction == 'decreasing' ? '下降' : '稳定') }}
+                                            转为{{ inflection.direction == 'increasing' ? '上升' : (inflection.direction == 'decreasing' ? '下降' : '稳定') }}
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-{{ inflection.strength > 0.7 ? 'danger' : (inflection.strength > 0.4 ? 'warning' : 'info') }}">
+                                                强度: {{ (inflection.strength * 100) | round(1) }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {% if inflection.description %}
+                                    <div class="mt-2 small">{{ inflection.description }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- 总结分析 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">趋势总结</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead">{{ result.summary | safe }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 趋势方法卡片选择
+        const trendMethodCards = document.querySelectorAll('.trend-method-card');
+        trendMethodCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // 移除所有卡片的选中状态
+                trendMethodCards.forEach(c => c.classList.remove('selected'));
+                // 为当前卡片添加选中状态
+                this.classList.add('selected');
+                // 选中对应的单选按钮
+                const method = this.dataset.method;
+                document.querySelector(`input[name="trend_method"][value="${method}"]`).checked = true;
+            });
+        });
+        
+        // 加载示例数据
+        document.getElementById('loadSampleDataBtn').addEventListener('click', function() {
+            document.getElementById('metricName').value = '日活跃用户数';
+            document.getElementById('metricValues').value = '10520\n10982\n11420\n12058\n12743\n13125\n12897\n13452\n14230\n14789\n15324\n15942\n16321\n16890\n16540\n17234\n17892\n18345\n18734\n19243\n19562\n20134\n20876\n21345';
+            document.getElementById('timestamps').value = '2023-01-01\n2023-01-15\n2023-02-01\n2023-02-15\n2023-03-01\n2023-03-15\n2023-04-01\n2023-04-15\n2023-05-01\n2023-05-15\n2023-06-01\n2023-06-15\n2023-07-01\n2023-07-15\n2023-08-01\n2023-08-15\n2023-09-01\n2023-09-15\n2023-10-01\n2023-10-15\n2023-11-01\n2023-11-15\n2023-12-01\n2023-12-15';
+        });
+        
+        // 提交前显示加载状态
+        document.getElementById('trendAnalysisForm').addEventListener('submit', function() {
+            document.getElementById('analyzeBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>分析中...';
+            document.getElementById('analyzeBtn').disabled = true;
+        });
+        
+        {% if result %}
+        // 绘制趋势图表
+        const trendData = [
+            {
+                x: {{ result.timestamps | tojson }},
+                y: {{ result.values | tojson }},
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '原始数据',
+                marker: {size: 6}
+            },
+            {
+                x: {{ result.timestamps | tojson }},
+                y: {{ result.trend_values | tojson }},
+                type: 'scatter',
+                mode: 'lines',
+                name: '趋势线',
+                line: {width: 3, color: '#4f46e5'}
+            }
+        ];
+        
+        // 添加拐点
+        {% if result.inflections and result.inflections|length > 0 %}
+        const inflectionDates = [];
+        const inflectionValues = [];
+        const inflectionTexts = [];
+        
+        {% for inflection in result.inflections %}
+        inflectionDates.push("{{ inflection.date }}");
+        inflectionValues.push({{ inflection.value }});
+        inflectionTexts.push('拐点: {{ inflection.date }}<br>从{{ inflection.before_direction == "increasing" ? "上升" : (inflection.before_direction == "decreasing" ? "下降" : "稳定") }}转为{{ inflection.direction == "increasing" ? "上升" : (inflection.direction == "decreasing" ? "下降" : "稳定") }}');
+        {% endfor %}
+        
+        trendData.push({
+            x: inflectionDates,
+            y: inflectionValues,
+            type: 'scatter',
+            mode: 'markers',
+            name: '拐点',
+            marker: {
+                size: 10,
+                color: '#ef4444',
+                symbol: 'circle'
+            },
+            text: inflectionTexts,
+            hoverinfo: 'text'
+        });
+        {% endif %}
+        
+        const trendLayout = {
+            title: '{{ result.metric_name }} 趋势分析',
+            xaxis: {title: '日期'},
+            yaxis: {title: '{{ result.metric_name }}'},
+            hovermode: 'closest',
+            legend: {orientation: 'h', y: -0.2},
+            autosize: true,
+            margin: {l: 50, r: 20, t: 50, b: 50}
+        };
+        
+        Plotly.newPlot('trendChart', trendData, trendLayout, {responsive: true});
+        
+        // 绘制分布图表
+        const values = {{ result.values | tojson }};
+        const distributionData = [
+            {
+                x: values,
+                type: 'histogram',
+                marker: {
+                    color: 'rgba(99, 102, 241, 0.7)',
+                    line: {
+                        color: 'rgba(99, 102, 241, 1)',
+                        width: 1
+                    }
+                },
+                name: '分布'
+            },
+            {
+                x: values,
+                type: 'box',
+                name: '箱线图',
+                marker: {color: '#4f46e5'},
+                boxmean: true,
+                orientation: 'h',
+                yaxis: 'y2'
+            }
+        ];
+        
+        const distributionLayout = {
+            title: '数据分布',
+            xaxis: {title: '{{ result.metric_name }}'},
+            yaxis: {title: '频率'},
+            yaxis2: {
+                title: '',
+                overlaying: 'y',
+                side: 'right',
+                showgrid: false,
+                zeroline: false,
+                showticklabels: false
+            },
+            margin: {l: 50, r: 20, t: 50, b: 50},
+            bargap: 0.1
+        };
+        
+        Plotly.newPlot('distributionChart', distributionData, distributionLayout, {responsive: true});
+        
+        // 导出结果
+        document.getElementById('exportResultBtn').addEventListener('click', function() {
+            const result = {{ result | tojson }};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "trend_analysis_result.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %} 

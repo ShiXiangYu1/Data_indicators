@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .dashboard-card {
+        transition: all 0.3s;
+        border-radius: 0.5rem;
+        height: 100%;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dashboard-card .card-body {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .dashboard-icon {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-stat {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-trend {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    .trend-up {
+        background-color: rgba(21, 128, 61, 0.1);
+        color: #15803d;
+    }
+    
+    .trend-down {
+        background-color: rgba(185, 28, 28, 0.1);
+        color: #b91c1c;
+    }
+    
+    .trend-neutral {
+        background-color: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+    
+    .quick-stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .quick-stat-card {
+        background-color: #f9fafb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .quick-stat-card .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    .quick-stat-card .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .analysis-type-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background-color: #f9fafb;
+        transition: all 0.2s;
+    }
+    
+    .analysis-type-card:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    
+    .analysis-type-card h5 {
+        margin-bottom: 0.75rem;
+        color: var(--primary-color);
+    }
+    
+    .analysis-type-card p {
+        color: #4b5563;
+        margin-bottom: 1rem;
+    }
+    
+    .recent-analysis-card {
+        border-left: 3px solid var(--primary-color);
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0.375rem 0.375rem 0;
+        transition: all 0.2s;
+    }
+    
+    .recent-analysis-card:hover {
+        background-color: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- 欢迎卡片 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-sm-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">数据分析仪表盘</h2>
+                    <p class="text-muted mb-0">欢迎使用数据指标分析平台，探索您的数据洞察</p>
+                </div>
+                <div class="mt-3 mt-sm-0">
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" id="newAnalysisDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-plus me-2"></i>新建分析
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="newAnalysisDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('web.trend_analysis') }}"><i class="fas fa-chart-line me-2"></i>趋势分析</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('web.correlation_analysis') }}"><i class="fas fa-chart-scatter me-2"></i>相关性分析</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('web.attribution_analysis') }}"><i class="fas fa-chart-pie me-2"></i>归因分析</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('web.reason_analysis') }}"><i class="fas fa-search me-2"></i>原因分析</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 快速统计数据 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card dashboard-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="dashboard-icon bg-white text-primary">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">趋势分析</h5>
+                    <div class="dashboard-stat">24</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>本周进行的分析</span>
+                        <span class="stat-trend trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>12%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card bg-success text-white">
+                <div class="card-body">
+                    <div class="dashboard-icon bg-white text-success">
+                        <i class="fas fa-chart-scatter fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">相关性分析</h5>
+                    <div class="dashboard-stat">18</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>本周进行的分析</span>
+                        <span class="stat-trend trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>8%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card bg-info text-white">
+                <div class="card-body">
+                    <div class="dashboard-icon bg-white text-info">
+                        <i class="fas fa-chart-pie fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">归因分析</h5>
+                    <div class="dashboard-stat">12</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>本周进行的分析</span>
+                        <span class="stat-trend trend-down">
+                            <i class="fas fa-arrow-down me-1"></i>3%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card dashboard-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="dashboard-icon bg-white text-warning">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">原因分析</h5>
+                    <div class="dashboard-stat">15</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>本周进行的分析</span>
+                        <span class="stat-trend trend-up">
+                            <i class="fas fa-arrow-up me-1"></i>15%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 分析类型和最近分析 -->
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4 class="mb-0">分析类型</h4>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('web.trend_analysis') }}" class="text-decoration-none">
+                        <div class="analysis-type-card">
+                            <h5><i class="fas fa-chart-line me-2"></i>趋势分析</h5>
+                            <p>分析指标的时间序列变化趋势，识别增长、下降、季节性和拐点</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-primary">最常用</span>
+                                <button class="btn btn-sm btn-outline-primary">开始分析</button>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="{{ url_for('web.correlation_analysis') }}" class="text-decoration-none">
+                        <div class="analysis-type-card">
+                            <h5><i class="fas fa-chart-scatter me-2"></i>相关性分析</h5>
+                            <p>探索不同指标之间的关系，确定相关性强度和方向</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary">常用</span>
+                                <button class="btn btn-sm btn-outline-primary">开始分析</button>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="{{ url_for('web.attribution_analysis') }}" class="text-decoration-none">
+                        <div class="analysis-type-card">
+                            <h5><i class="fas fa-chart-pie me-2"></i>归因分析</h5>
+                            <p>确定各个因素对目标指标的贡献度和影响程度</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary">常用</span>
+                                <button class="btn btn-sm btn-outline-primary">开始分析</button>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="{{ url_for('web.reason_analysis') }}" class="text-decoration-none">
+                        <div class="analysis-type-card">
+                            <h5><i class="fas fa-search me-2"></i>原因分析</h5>
+                            <p>深入挖掘指标变化的原因，提供可能的解释和建议</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-secondary">常用</span>
+                                <button class="btn btn-sm btn-outline-primary">开始分析</button>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-5 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">最近分析</h4>
+                        <a href="#" class="btn btn-sm btn-link">查看全部</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="recent-analysis-card">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">日活跃用户数趋势分析</h6>
+                            <span class="badge bg-primary">趋势分析</span>
+                        </div>
+                        <div class="text-muted small mb-2">2023-12-15 10:30</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">上升趋势，增长率 7.8%</div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">查看</a>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-analysis-card">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">广告支出与转化率相关性</h6>
+                            <span class="badge bg-success">相关性分析</span>
+                        </div>
+                        <div class="text-muted small mb-2">2023-12-14 16:45</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">中度正相关 (r=0.68)</div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">查看</a>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-analysis-card">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">销售额下降原因分析</h6>
+                            <span class="badge bg-warning">原因分析</span>
+                        </div>
+                        <div class="text-muted small mb-2">2023-12-13 09:15</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">3个可能原因，置信度 85%</div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">查看</a>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-analysis-card">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">网站流量来源归因</h6>
+                            <span class="badge bg-info">归因分析</span>
+                        </div>
+                        <div class="text-muted small mb-2">2023-12-12 14:20</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">社交媒体占比 42%，自然搜索 35%</div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">查看</a>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-analysis-card">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="mb-1">用户留存率趋势分析</h6>
+                            <span class="badge bg-primary">趋势分析</span>
+                        </div>
+                        <div class="text-muted small mb-2">2023-12-11 11:30</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">稳定趋势，波动范围 ±2.3%</div>
+                            <a href="#" class="btn btn-sm btn-outline-primary">查看</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 快速指标统计 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">关键指标概览</h4>
+                </div>
+                <div class="card-body">
+                    <div class="quick-stats-container">
+                        <div class="quick-stat-card">
+                            <div class="stat-label">日活跃用户</div>
+                            <div class="stat-value">21,456</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>5.8%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">转化率</div>
+                            <div class="stat-value">3.2%</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>0.4%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">平均会话时长</div>
+                            <div class="stat-value">4m 32s</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>12.5%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">跳出率</div>
+                            <div class="stat-value">42.7%</div>
+                            <div class="stat-trend trend-down">
+                                <i class="fas fa-arrow-down me-1"></i>2.1%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">每用户收入</div>
+                            <div class="stat-value">¥78.35</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>3.4%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">客户满意度</div>
+                            <div class="stat-value">4.6/5</div>
+                            <div class="stat-trend trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>0.2
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">新用户</div>
+                            <div class="stat-value">3,245</div>
+                            <div class="stat-trend trend-down">
+                                <i class="fas fa-arrow-down me-1"></i>1.3%
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stat-card">
+                            <div class="stat-label">广告点击率</div>
+                            <div class="stat-value">2.8%</div>
+                            <div class="stat-trend trend-neutral">
+                                <i class="fas fa-minus me-1"></i>0.1%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 仪表盘脚本可以在这里添加
+        // 例如，可以添加实时更新数据、图表或通知功能
+        
+        // 为分析类型卡片添加点击事件
+        document.querySelectorAll('.analysis-type-card').forEach(card => {
+            card.querySelector('.btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = card.closest('a').getAttribute('href');
+            });
+        });
+    });
+</script>
+{% endblock %} 

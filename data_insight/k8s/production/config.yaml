@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-insight-config
+  namespace: data-insight-production
+  labels:
+    app: data-insight-api
+    environment: production
+data:
+  ENVIRONMENT: "production"
+  PORT: "8000"
+  REDIS_HOST: "redis.data-insight-production.svc.cluster.local"
+  REDIS_PORT: "6379"
+  LOG_LEVEL: "INFO"
+  CACHE_TTL: "3600"
+  PERFORMANCE_LOGGING: "true"
+  DEFAULT_THROTTLE_RATE: "100"
+
+---
+# 注意：在实际部署中，应该使用 Kubernetes Secret 或 外部密钥管理系统
+# 以下仅为示例，实际使用时应该通过 CI/CD 流水线或 Kubernetes Secret 进行创建
+apiVersion: v1
+kind: Secret
+metadata:
+  name: data-insight-secrets
+  namespace: data-insight-production
+  labels:
+    app: data-insight-api
+    environment: production
+type: Opaque
+# 实际部署时，这些值应该是 base64 编码的
+# 此处仅为示例，不应该直接提交到版本控制系统
+stringData:
+  api-key: "请替换为实际API密钥"
+  redis-password: "请替换为实际Redis密码" 

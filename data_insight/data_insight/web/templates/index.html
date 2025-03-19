@@ -9,195 +9,203 @@
 {% block page_title %}数据指标分析平台{% endblock %}
 
 {% block content %}
-<!-- 功能概览卡片 -->
-<div class="row g-4 mb-5">
-    <!-- 指标分析卡片 -->
-    <div class="col-md-4">
+<!-- 欢迎横幅 -->
+<div class="jumbotron bg-white p-5 rounded-3 shadow-sm mb-5">
+    <h1 class="display-4">欢迎使用数据指标分析平台</h1>
+    <p class="lead">本平台提供专业的数据指标分析工具，帮助您深入了解数据趋势、相关性、归因和原因分析。</p>
+    <hr class="my-4">
+    <p>通过我们的分析工具，您可以快速发现数据中隐藏的模式和洞察，做出更明智的决策。</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('web.dashboard') }}" role="button">
+        <i class="fas fa-tachometer-alt me-2"></i>进入仪表盘
+    </a>
+</div>
+
+<!-- 功能展示 -->
+<h2 class="mb-4">主要功能</h2>
+<div class="row row-cols-1 row-cols-md-2 g-4 mb-5">
+    <div class="col">
         <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-chart-bar fa-3x text-primary"></i>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-chart-line text-primary fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">趋势分析</h3>
                 </div>
-                <h5 class="card-title">指标分析</h5>
-                <p class="card-text">快速分析单个指标的变化趋势、异常情况和关键洞察。</p>
-                <a href="{{ url_for('metric_analysis') }}" class="btn btn-primary">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                <p class="card-text">深入分析时间序列数据，发现数据趋势、季节性模式和异常点。支持多维度对比和趋势预测。</p>
+                <a href="{{ url_for('web.trend_analysis') }}" class="btn btn-outline-primary">
+                    了解更多 <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
         </div>
     </div>
-
-    <!-- 图表分析卡片 -->
-    <div class="col-md-4">
+    <div class="col">
         <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-chart-pie fa-3x text-success"></i>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-chart-scatter text-info fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">相关性分析</h3>
                 </div>
-                <h5 class="card-title">图表分析</h5>
-                <p class="card-text">深入分析各类图表数据，发现数据背后的规律和趋势。</p>
-                <a href="{{ url_for('chart_analysis') }}" class="btn btn-success">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                <p class="card-text">探索数据指标之间的相关关系，计算相关系数并生成相关性热力图，帮助您理解指标间的相互影响。</p>
+                <a href="{{ url_for('web.correlation_analysis') }}" class="btn btn-outline-info">
+                    了解更多 <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
         </div>
     </div>
-
-    <!-- 对比分析卡片 -->
-    <div class="col-md-4">
+    <div class="col">
         <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-not-equal fa-3x text-info"></i>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-sitemap text-success fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">归因分析</h3>
                 </div>
-                <h5 class="card-title">对比分析</h5>
-                <p class="card-text">多维度指标对比，发现指标间的关联性和差异。</p>
-                <a href="{{ url_for('comparison_analysis') }}" class="btn btn-info">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                <p class="card-text">分解关键指标的影响因素，量化各因素的贡献度，帮助您理解哪些因素对目标指标影响最大。</p>
+                <a href="{{ url_for('web.attribution_analysis') }}" class="btn btn-outline-success">
+                    了解更多 <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
         </div>
     </div>
-
-    <!-- 根因分析卡片 -->
-    <div class="col-md-4">
+    <div class="col">
         <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-network-wired fa-3x text-warning"></i>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                        <i class="fas fa-search text-warning fa-2x"></i>
+                    </div>
+                    <h3 class="card-title mb-0">原因分析</h3>
                 </div>
-                <h5 class="card-title">根因分析</h5>
-                <p class="card-text">智能分析问题根源，构建因果关系网络。</p>
-                <a href="{{ url_for('root_cause_analysis') }}" class="btn btn-warning">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- 预测分析卡片 -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-crystal-ball fa-3x text-danger"></i>
-                </div>
-                <h5 class="card-title">预测分析</h5>
-                <p class="card-text">基于历史数据预测未来趋势，提前发现潜在问题。</p>
-                <a href="{{ url_for('prediction_analysis') }}" class="btn btn-danger">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- 智能建议卡片 -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                    <i class="fas fa-lightbulb fa-3x text-secondary"></i>
-                </div>
-                <h5 class="card-title">智能建议</h5>
-                <p class="card-text">根据分析结果生成智能建议，指导决策制定。</p>
-                <a href="{{ url_for('suggestion_analysis') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right me-2"></i>开始分析
+                <p class="card-text">挖掘数据异常或变化的潜在原因，通过多维分析和自动检测算法，揭示数据变化背后的关键因素。</p>
+                <a href="{{ url_for('web.reason_analysis') }}" class="btn btn-outline-warning">
+                    了解更多 <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 平台特点 -->
-<div class="row mb-5">
-    <div class="col-12">
-        <h2 class="text-center mb-4">平台特点</h2>
-        <div class="row g-4">
-            <div class="col-md-3">
-                <div class="text-center">
-                    <i class="fas fa-bolt fa-2x text-primary mb-3"></i>
-                    <h5>快速分析</h5>
-                    <p>支持实时数据分析，快速生成洞察报告。</p>
+<!-- 数据统计卡片 -->
+<h2 class="mb-4">平台统计</h2>
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+    <div class="col">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="display-4 text-primary mb-2">
+                    <i class="fas fa-database"></i>
                 </div>
+                <h3 class="fs-2 mb-3">{{ stats.datasets|default(10) }}</h3>
+                <p class="card-text text-muted">可分析数据集</p>
             </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <i class="fas fa-brain fa-2x text-success mb-3"></i>
-                    <h5>智能解读</h5>
-                    <p>运用AI技术，自动生成数据解读文本。</p>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="display-4 text-success mb-2">
+                    <i class="fas fa-chart-bar"></i>
                 </div>
+                <h3 class="fs-2 mb-3">{{ stats.analyses|default(250) }}</h3>
+                <p class="card-text text-muted">已完成分析</p>
             </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <i class="fas fa-chart-line fa-2x text-info mb-3"></i>
-                    <h5>可视化展示</h5>
-                    <p>丰富的图表类型，直观展示数据趋势。</p>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="display-4 text-info mb-2">
+                    <i class="fas fa-users"></i>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <i class="fas fa-shield-alt fa-2x text-warning mb-3"></i>
-                    <h5>安全可靠</h5>
-                    <p>数据安全保护，确保分析结果可靠。</p>
-                </div>
+                <h3 class="fs-2 mb-3">{{ stats.users|default(50) }}</h3>
+                <p class="card-text text-muted">活跃用户</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 使用指南 -->
-<div class="row">
-    <div class="col-12">
-        <h2 class="text-center mb-4">使用指南</h2>
-        <div class="accordion" id="guideAccordion">
-            <!-- 数据准备 -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#guide1">
-                        <i class="fas fa-database me-2"></i>数据准备
-                    </button>
-                </h2>
-                <div id="guide1" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
-                    <div class="accordion-body">
-                        <p>1. 准备您的数据文件（支持CSV、Excel等格式）</p>
-                        <p>2. 确保数据格式正确，包含必要的字段</p>
-                        <p>3. 上传数据到平台进行分析</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 选择分析类型 -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guide2">
-                        <i class="fas fa-tasks me-2"></i>选择分析类型
-                    </button>
-                </h2>
-                <div id="guide2" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
-                    <div class="accordion-body">
-                        <p>1. 根据您的分析需求选择合适的分析类型</p>
-                        <p>2. 设置分析参数和选项</p>
-                        <p>3. 点击"开始分析"按钮</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 查看结果 -->
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#guide3">
-                        <i class="fas fa-chart-bar me-2"></i>查看结果
-                    </button>
-                </h2>
-                <div id="guide3" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
-                    <div class="accordion-body">
-                        <p>1. 查看分析结果和可视化图表</p>
-                        <p>2. 阅读自动生成的解读文本</p>
-                        <p>3. 导出分析报告或分享结果</p>
-                    </div>
-                </div>
-            </div>
+<!-- API接口信息 -->
+<div class="card mb-5">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0 fs-4">API 接口</h2>
+        <a href="{{ url_for('web.api_documentation') }}" class="btn btn-sm btn-outline-primary">查看完整文档</a>
+    </div>
+    <div class="card-body">
+        <p>我们提供完整的RESTful API，让您可以将数据分析能力无缝集成到您的应用中：</p>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>API端点</th>
+                        <th>功能描述</th>
+                        <th>请求方式</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/api/v1/trend-analysis</code></td>
+                        <td>趋势分析API</td>
+                        <td><span class="badge bg-success">POST</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/v1/correlation-analysis</code></td>
+                        <td>相关性分析API</td>
+                        <td><span class="badge bg-success">POST</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/v1/attribution-analysis</code></td>
+                        <td>归因分析API</td>
+                        <td><span class="badge bg-success">POST</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>/api/v1/reason-analysis</code></td>
+                        <td>原因分析API</td>
+                        <td><span class="badge bg-success">POST</span></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
+    </div>
+</div>
+
+<!-- 快速开始指南 -->
+<div class="card mb-5">
+    <div class="card-header">
+        <h2 class="mb-0 fs-4">快速开始</h2>
+    </div>
+    <div class="card-body">
+        <ol class="list-group list-group-numbered mb-4">
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">选择分析类型</div>
+                    根据您的需求选择合适的分析方法：趋势分析、相关性分析、归因分析或原因分析。
+                </div>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">输入分析参数</div>
+                    提供必要的数据参数，如指标名称、时间范围、维度等。
+                </div>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">获取分析结果</div>
+                    系统会生成详细的分析报告，包括数据可视化、关键发现和建议。
+                </div>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="ms-2 me-auto">
+                    <div class="fw-bold">导出或共享</div>
+                    分析结果可以导出为多种格式，或通过链接直接分享给团队成员。
+                </div>
+            </li>
+        </ol>
+        <a href="{{ url_for('web.user_guide') }}" class="btn btn-primary">
+            <i class="fas fa-book me-2"></i>查看详细使用指南
+        </a>
     </div>
 </div>
 {% endblock %}

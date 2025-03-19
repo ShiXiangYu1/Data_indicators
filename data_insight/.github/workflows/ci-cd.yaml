@@ -1,0 +1,156 @@
+name: 数据指标分析系统 CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOCKER_REGISTRY: ghcr.io
+  DOCKER_IMAGE_NAME: ${{ github.repository_owner }}/data-insight
+  KUBERNETES_NAMESPACE: data-insight
+
+jobs:
+  lint-and-test:
+    name: 代码检查和单元测试
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    - name: 设置Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+        
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        
+    - name: 代码风格检查
+      run: |
+        flake8 data_insight tests
+        black --check data_insight tests
+        
+    - name: 运行单元测试
+      run: |
+        pytest tests/ --cov=data_insight --cov-report=xml
+        
+    - name: 上传测试覆盖率报告
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        fail_ci_if_error: false
+        verbose: true
+
+  build:
+    name: 构建Docker镜像
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: success() && (github.event_name == 'push' || github.event_name == 'release')
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    - name: 设置Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: 登录到GitHub容器注册表
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 提取元数据
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=ref,event=branch
+          type=sha,prefix=,format=short
+          
+    - name: 构建和推送
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    name: 部署到Kubernetes
+    runs-on: ubuntu-latest
+    needs: build
+    if: success() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'staging' || 'production' }}
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    - name: 设置Kustomize
+      uses: imranismail/setup-kustomize@v1
+      
+    - name: 设置kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: 配置Kubernetes凭据
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+        
+    - name: 设置镜像标签
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          TAG=${GITHUB_REF#refs/tags/}
+        else
+          TAG=${GITHUB_SHA::7}
+        fi
+        echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+        
+    - name: 更新Kubernetes配置
+      run: |
+        cd kubernetes
+        kustomize edit set image ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}=${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
+        
+    - name: 部署到Kubernetes
+      run: |
+        kubectl create namespace ${KUBERNETES_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+        kustomize build kubernetes | kubectl apply -n ${KUBERNETES_NAMESPACE} -f -
+        
+    - name: 验证部署
+      run: |
+        kubectl -n ${KUBERNETES_NAMESPACE} rollout status deployment/data-insight
+        
+  notify:
+    name: 部署通知
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+    
+    steps:
+    - name: 发送通知
+      uses: slackapi/slack-github-action@v1.23.0
+      with:
+        payload: |
+          {
+            "text": "🚀 部署状态: ${{ needs.deploy.result == 'success' && '成功 ✅' || '失败 ❌' }}\n环境: ${{ github.ref == 'refs/heads/main' && '预发布环境' || '生产环境' }}\n版本: ${{ env.IMAGE_TAG }}\n构建链接: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 

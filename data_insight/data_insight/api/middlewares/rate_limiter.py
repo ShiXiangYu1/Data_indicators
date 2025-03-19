@@ -1,184 +1,323 @@
-"""
-请求速率限制中间件
-==============
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-限制API请求频率，防止滥用。
+"""
+API速率限制中间件
+=============
+
+提供API速率限制功能，防止API滥用，包括基于IP、令牌和API密钥的限流功能。
 """
 
 import time
-from functools import wraps
-from flask import request, jsonify, current_app
-import threading
+import logging
+import functools
+from typing import Dict, List, Any, Callable, Optional, Tuple, Union
+from collections import defaultdict
+
+from flask import request, jsonify, current_app, g
+from werkzeug.exceptions import TooManyRequests
+
+from data_insight.api.utils.response_formatter import format_error_response
 
 
 class RateLimiter:
-    """
-    请求速率限制器
+    """速率限制器基类"""
     
-    使用滑动窗口算法限制每个客户端的请求频率。
-    """
-    
-    def __init__(self, limit=60, window=60):
+    def __init__(self, limit: int = 100, window: int = 3600):
         """
         初始化速率限制器
         
         参数:
-            limit (int): 窗口期内的最大请求数
-            window (int): 窗口期大小，单位为秒
+            limit (int, optional): 时间窗口内允许的最大请求数，默认为100
+            window (int, optional): 时间窗口（秒），默认为3600（1小时）
         """
         self.limit = limit
         self.window = window
-        self.clients = {}
-        self.lock = threading.Lock()
-        
-        # 启动清理过期记录的线程
-        self.cleanup_thread = threading.Thread(target=self._cleanup_expired_records, daemon=True)
-        self.cleanup_thread.start()
+        self.requests = defaultdict(list)
     
-    def _cleanup_expired_records(self):
-        """清理过期的客户端记录，每分钟运行一次"""
-        while True:
-            time.sleep(60)  # 每60秒清理一次
-            now = time.time()
-            with self.lock:
-                for client_id in list(self.clients.keys()):
-                    # 过滤掉过期的请求记录
-                    self.clients[client_id] = [
-                        timestamp for timestamp in self.clients.get(client_id, [])
-                        if now - timestamp < self.window
-                    ]
-                    # 如果客户端没有有效记录，则删除
-                    if not self.clients[client_id]:
-                        del self.clients[client_id]
-    
-    def is_allowed(self, client_id):
+    def get_key(self, request) -> str:
         """
-        检查客户端是否允许请求
+        获取请求的唯一标识符
         
         参数:
-            client_id (str): 客户端标识
+            request: 当前请求对象
             
         返回:
-            bool: 是否允许
+            str: 请求的唯一标识符
         """
-        now = time.time()
-        
-        with self.lock:
-            # 获取客户端的请求时间戳列表
-            timestamps = self.clients.get(client_id, [])
-            
-            # 过滤掉过期的请求记录
-            valid_timestamps = [ts for ts in timestamps if now - ts < self.window]
-            
-            # 检查是否超过限制
-            if len(valid_timestamps) >= self.limit:
-                return False
-            
-            # 记录新的请求
-            valid_timestamps.append(now)
-            self.clients[client_id] = valid_timestamps
-            
-            return True
+        raise NotImplementedError("子类必须实现此方法")
     
-    def get_remaining(self, client_id):
+    def is_allowed(self, request) -> Tuple[bool, int, int]:
         """
-        获取客户端剩余的请求次数
+        检查请求是否被允许
         
         参数:
-            client_id (str): 客户端标识
+            request: 当前请求对象
             
         返回:
-            int: 剩余的请求次数
+            Tuple[bool, int, int]: (是否允许, 剩余可用请求数, 重置时间)
         """
+        key = self.get_key(request)
         now = time.time()
         
-        with self.lock:
-            # 获取客户端的请求时间戳列表
-            timestamps = self.clients.get(client_id, [])
+        # 清理过期的请求记录
+        self.requests[key] = [t for t in self.requests[key] if now - t < self.window]
+        
+        # 检查是否超出限制
+        if len(self.requests[key]) >= self.limit:
+            reset_time = int(self.requests[key][0] + self.window - now)
+            return False, 0, reset_time
+        
+        # 记录当前请求
+        self.requests[key].append(now)
+        
+        # 计算剩余可用请求数和重置时间
+        remaining = self.limit - len(self.requests[key])
+        if self.requests[key]:
+            reset_time = int(self.requests[key][0] + self.window - now)
+        else:
+            reset_time = self.window
+        
+        return True, remaining, reset_time
+
+
+class IPRateLimiter(RateLimiter):
+    """基于IP的速率限制器"""
+    
+    def get_key(self, request) -> str:
+        """
+        获取请求的IP地址
+        
+        参数:
+            request: 当前请求对象
             
-            # 过滤掉过期的请求记录
-            valid_timestamps = [ts for ts in timestamps if now - ts < self.window]
+        返回:
+            str: 请求的IP地址
+        """
+        return request.remote_addr
+
+
+class TokenRateLimiter(RateLimiter):
+    """基于令牌的速率限制器"""
+    
+    def get_key(self, request) -> str:
+        """
+        获取请求的令牌
+        
+        参数:
+            request: 当前请求对象
             
-            # 计算剩余请求次数
-            return max(0, self.limit - len(valid_timestamps))
+        返回:
+            str: 请求的令牌，如果没有则返回IP地址
+        """
+        token = request.headers.get('X-API-Token')
+        if token:
+            return token
+        return request.remote_addr
 
 
-# 创建全局速率限制器实例
-rate_limiter = RateLimiter()
+class APIKeyRateLimiter(RateLimiter):
+    """基于API密钥的速率限制器"""
+    
+    def __init__(self, limit: int = 100, window: int = 3600, api_key_field: str = 'X-API-Key'):
+        """
+        初始化API密钥速率限制器
+        
+        参数:
+            limit (int, optional): 时间窗口内允许的最大请求数，默认为100
+            window (int, optional): 时间窗口（秒），默认为3600（1小时）
+            api_key_field (str, optional): API密钥请求头字段名，默认为'X-API-Key'
+        """
+        super().__init__(limit, window)
+        self.api_key_field = api_key_field
+    
+    def get_key(self, request) -> str:
+        """
+        获取请求的API密钥
+        
+        参数:
+            request: 当前请求对象
+            
+        返回:
+            str: 请求的API密钥，如果没有则返回IP地址
+        """
+        api_key = request.headers.get(self.api_key_field)
+        if api_key:
+            return api_key
+        return request.remote_addr
 
 
-def rate_limit(f):
+class PathRateLimiter(RateLimiter):
+    """基于路径的速率限制器"""
+    
+    def get_key(self, request) -> str:
+        """
+        获取请求的路径
+        
+        参数:
+            request: 当前请求对象
+            
+        返回:
+            str: 请求的路径
+        """
+        return f"{request.remote_addr}:{request.path}"
+
+
+class RateLimiterManager:
+    """速率限制器管理器"""
+    
+    def __init__(self, app=None):
+        """
+        初始化速率限制器管理器
+        
+        参数:
+            app: Flask应用实例
+        """
+        self.limiters = {}
+        
+        if app:
+            self.init_app(app)
+    
+    def init_app(self, app):
+        """
+        初始化应用
+        
+        参数:
+            app: Flask应用实例
+        """
+        app.rate_limiter_manager = self
+    
+    def add_limiter(self, name: str, limiter: RateLimiter):
+        """
+        添加速率限制器
+        
+        参数:
+            name (str): 速率限制器名称
+            limiter (RateLimiter): 速率限制器实例
+        """
+        self.limiters[name] = limiter
+    
+    def get_limiter(self, name: str) -> Optional[RateLimiter]:
+        """
+        获取速率限制器
+        
+        参数:
+            name (str): 速率限制器名称
+            
+        返回:
+            Optional[RateLimiter]: 速率限制器实例，如果不存在则返回None
+        """
+        return self.limiters.get(name)
+
+
+def rate_limit(limiter_name: str = 'default') -> Callable:
     """
-    请求速率限制装饰器
+    速率限制装饰器
     
-    限制每个客户端的请求频率。
+    如果请求超出速率限制，则返回429错误
     
     参数:
-        f (callable): 被装饰的函数
+        limiter_name (str, optional): 速率限制器名称，默认为'default'
         
-    返回:
-        callable: 包装后的函数
+    用法:
+        @app.route('/api/resource')
+        @rate_limit('ip')
+        def resource():
+            return "This is a rate-limited resource"
     """
-    @wraps(f)
+    def decorator(f: Callable) -> Callable:
+        @functools.wraps(f)
     def decorated(*args, **kwargs):
-        # 如果处于调试模式，则跳过速率限制
-        if current_app.debug:
+            try:
+                # 获取速率限制器
+                limiter = current_app.rate_limiter_manager.get_limiter(limiter_name)
+                if not limiter:
+                    # 如果速率限制器不存在，则继续执行被装饰的函数
             return f(*args, **kwargs)
         
-        # 获取客户端标识（优先使用API令牌，其次使用IP地址）
-        client_id = request.headers.get('X-API-Token', request.remote_addr)
-        
-        # 检查是否允许请求
-        if not rate_limiter.is_allowed(client_id):
-            remaining = 0
-            reset_time = int(time.time()) + rate_limiter.window
+                # 检查请求是否被允许
+                allowed, remaining, reset_time = limiter.is_allowed(request)
+                
+                # 设置响应头
+                response = None
+                
+                # 如果请求被允许，则继续执行被装饰的函数
+                if allowed:
+                    response = f(*args, **kwargs)
+                else:
+                    # 如果请求超出速率限制，则返回429错误
+                    response = jsonify(format_error_response(
+                        message="API速率限制已达到，请稍后再试",
+                        status_code=429
+                    ))
+                    response.status_code = 429
             
             # 设置速率限制响应头
-            headers = {
-                'X-RateLimit-Limit': str(rate_limiter.limit),
-                'X-RateLimit-Remaining': '0',
-                'X-RateLimit-Reset': str(reset_time),
-                'Retry-After': str(rate_limiter.window)
-            }
+                if hasattr(response, 'headers'):
+                    response.headers['X-RateLimit-Limit'] = str(limiter.limit)
+                    response.headers['X-RateLimit-Remaining'] = str(remaining)
+                    response.headers['X-RateLimit-Reset'] = str(reset_time)
+                
+                return response
             
-            return jsonify({
-                'error': '请求频率过高',
-                'message': f'超过速率限制，请在{rate_limiter.window}秒后重试',
-                'status_code': 429
-            }), 429, headers
+            except Exception as e:
+                # 记录错误
+                current_app.logger.error(f"速率限制错误: {str(e)}")
+                
+                # 返回500错误
+                response = jsonify(format_error_response(
+                    message=f"速率限制处理错误: {str(e)}",
+                    status_code=500
+                ))
+                response.status_code = 500
+                return response
         
-        # 获取剩余的请求次数
-        remaining = rate_limiter.get_remaining(client_id)
-        reset_time = int(time.time()) + rate_limiter.window
-        
-        # 执行原函数并获取响应
-        response = f(*args, **kwargs)
-        
-        # 如果响应是元组，则第一个元素是响应对象
-        if isinstance(response, tuple):
-            resp_obj = response[0]
-            resp_status = response[1] if len(response) > 1 else 200
-            resp_headers = response[2] if len(response) > 2 else {}
-            
-            # 添加速率限制响应头
-            resp_headers.update({
-                'X-RateLimit-Limit': str(rate_limiter.limit),
-                'X-RateLimit-Remaining': str(remaining),
-                'X-RateLimit-Reset': str(reset_time)
-            })
-            
-            return resp_obj, resp_status, resp_headers
-        else:
-            # 直接返回的是响应对象
-            resp_obj = response
-            
-            # 添加速率限制响应头
-            resp_obj.headers.update({
-                'X-RateLimit-Limit': str(rate_limiter.limit),
-                'X-RateLimit-Remaining': str(remaining),
-                'X-RateLimit-Reset': str(reset_time)
-            })
-            
-            return resp_obj
+        return decorated
     
-    return decorated 
+    return decorator
+
+
+def configure_rate_limiter(app):
+    """
+    配置速率限制器
+    
+    参数:
+        app: Flask应用实例
+    """
+    # 初始化速率限制器管理器
+    manager = RateLimiterManager(app)
+    
+    # 添加基于IP的速率限制器
+    manager.add_limiter('ip', IPRateLimiter(
+        limit=app.config.get('IP_RATE_LIMIT', 100),
+        window=app.config.get('IP_RATE_WINDOW', 3600)
+    ))
+    
+    # 添加基于令牌的速率限制器
+    manager.add_limiter('token', TokenRateLimiter(
+        limit=app.config.get('TOKEN_RATE_LIMIT', 1000),
+        window=app.config.get('TOKEN_RATE_WINDOW', 3600)
+    ))
+    
+    # 添加基于API密钥的速率限制器
+    manager.add_limiter('api_key', APIKeyRateLimiter(
+        limit=app.config.get('API_KEY_RATE_LIMIT', 5000),
+        window=app.config.get('API_KEY_RATE_WINDOW', 3600),
+        api_key_field=app.config.get('API_KEY_FIELD', 'X-API-Key')
+    ))
+    
+    # 添加基于路径的速率限制器
+    manager.add_limiter('path', PathRateLimiter(
+        limit=app.config.get('PATH_RATE_LIMIT', 10),
+        window=app.config.get('PATH_RATE_WINDOW', 60)
+    ))
+    
+    # 设置默认速率限制器
+    default_limiter_name = app.config.get('DEFAULT_RATE_LIMITER', 'ip')
+    if default_limiter_name in manager.limiters:
+        manager.add_limiter('default', manager.get_limiter(default_limiter_name))
+    else:
+        manager.add_limiter('default', IPRateLimiter(
+            limit=app.config.get('DEFAULT_RATE_LIMIT', 100),
+            window=app.config.get('DEFAULT_RATE_WINDOW', 3600)
+        )) 

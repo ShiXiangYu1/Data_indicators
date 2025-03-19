@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .correlation-chart {
+        width: 100%;
+        height: 500px;
+    }
+    
+    .scatter-chart {
+        width: 100%;
+        height: 400px;
+    }
+    
+    .correlation-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+    }
+    
+    .correlation-value.strong-positive {
+        color: #15803d;  /* 深绿色 */
+    }
+    
+    .correlation-value.moderate-positive {
+        color: #22c55e;  /* 绿色 */
+    }
+    
+    .correlation-value.weak-positive {
+        color: #86efac;  /* 浅绿色 */
+    }
+    
+    .correlation-value.negligible {
+        color: #9ca3af;  /* 灰色 */
+    }
+    
+    .correlation-value.weak-negative {
+        color: #fca5a5;  /* 浅红色 */
+    }
+    
+    .correlation-value.moderate-negative {
+        color: #ef4444;  /* 红色 */
+    }
+    
+    .correlation-value.strong-negative {
+        color: #b91c1c;  /* 深红色 */
+    }
+    
+    .correlation-description {
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-top: 0.5rem;
+    }
+    
+    .correlation-significance {
+        text-align: center;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .correlation-detail {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: #f8fafc;
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .metric-pair {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        position: relative;
+    }
+    
+    .metric-remove-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    .sample-data-btn {
+        position: absolute;
+        right: 1rem;
+        top: 2.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .data-input-container {
+        position: relative;
+    }
+    
+    .data-format-hint {
+        position: absolute;
+        right: 0.5rem;
+        top: 0.5rem;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    
+    .lag-selection {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .lag-option {
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        background-color: #f3f4f6;
+        transition: all 0.2s;
+    }
+    
+    .lag-option:hover {
+        background-color: #e5e7eb;
+    }
+    
+    .lag-option.active {
+        background-color: #eef2ff;
+        color: var(--primary-color-dark);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- 分析表单卡片 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">相关性分析</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#analysisPanelCollapse" aria-expanded="true">
+                <i class="fas fa-angle-up"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="analysisPanelCollapse">
+            <div class="card-body">
+                <form id="correlationAnalysisForm" method="post" action="{{ url_for('web.correlation_analysis') }}">
+                    <div class="row mb-4">
+                        <div class="col-md-5">
+                            <div class="mb-3">
+                                <label for="primaryMetricName" class="form-label">主要指标名称</label>
+                                <input type="text" class="form-control" id="primaryMetricName" name="primary_metric_name" required placeholder="例如：日活跃用户数">
+                            </div>
+                            
+                            <div class="mb-3 data-input-container">
+                                <label for="primaryMetricValues" class="form-label">主要指标数据</label>
+                                <span class="data-format-hint">一行一个数值</span>
+                                <textarea class="form-control" id="primaryMetricValues" name="primary_values" rows="6" required placeholder="10.5&#10;12.3&#10;14.7&#10;13.2&#10;15.9&#10;17.8"></textarea>
+                                <button type="button" class="btn btn-sm btn-link sample-data-btn" id="loadSampleDataBtn">载入示例数据</button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <label class="form-label">次要指标</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="addMetricBtn">
+                                    <i class="fas fa-plus me-1"></i>添加指标
+                                </button>
+                            </div>
+                            
+                            <div id="secondaryMetrics">
+                                <!-- 动态添加的指标会插入到这里 -->
+                            </div>
+                            
+                            <template id="metricTemplate">
+                                <div class="metric-pair dynamic-item">
+                                    <button type="button" class="btn btn-sm btn-outline-danger metric-remove-btn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">指标名称</label>
+                                                <input type="text" class="form-control" name="secondary_metric_names[]" required placeholder="例如：广告支出">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3 data-input-container">
+                                                <label class="form-label">指标数据<span class="text-danger">*</span></label>
+                                                <span class="data-format-hint">一行一个数值</span>
+                                                <textarea class="form-control" name="secondary_values[]" rows="4" required placeholder="5.2&#10;6.1&#10;7.4&#10;6.5&#10;8.0&#10;8.9"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-5">
+                            <div class="mb-3 data-input-container">
+                                <label for="timestamps" class="form-label">时间戳</label>
+                                <span class="data-format-hint">一行一个日期，与指标数据行数一致</span>
+                                <textarea class="form-control" id="timestamps" name="timestamps" rows="6" required placeholder="2023-01-01&#10;2023-01-02&#10;2023-01-03&#10;2023-01-04&#10;2023-01-05&#10;2023-01-06"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">分析选项</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="correlationMethod" class="form-label">相关性计算方法</label>
+                                                <select class="form-select" id="correlationMethod" name="correlation_method">
+                                                    <option value="pearson" selected>皮尔逊相关系数 (Pearson)</option>
+                                                    <option value="spearman">斯皮尔曼等级相关系数 (Spearman)</option>
+                                                    <option value="kendall">肯德尔等级相关系数 (Kendall)</option>
+                                                </select>
+                                                <div class="form-text">
+                                                    皮尔逊适用于线性关系，斯皮尔曼和肯德尔适用于非线性关系
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="lagValue" class="form-label">时间滞后 (lag)</label>
+                                                <select class="form-select" id="lagValue" name="lag">
+                                                    <option value="0" selected>无滞后 (0)</option>
+                                                    <option value="1">滞后 1 个时间单位</option>
+                                                    <option value="2">滞后 2 个时间单位</option>
+                                                    <option value="3">滞后 3 个时间单位</option>
+                                                    <option value="-1">超前 1 个时间单位</option>
+                                                    <option value="-2">超前 2 个时间单位</option>
+                                                    <option value="-3">超前 3 个时间单位</option>
+                                                    <option value="auto">自动检测最佳滞后</option>
+                                                </select>
+                                                <div class="form-text">
+                                                    滞后值表示一个时间序列相对于另一个的偏移量
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="significanceLevel" class="form-label">显著性水平</label>
+                                                <select class="form-select" id="significanceLevel" name="significance_level">
+                                                    <option value="0.01">1% (p < 0.01)</option>
+                                                    <option value="0.05" selected>5% (p < 0.05)</option>
+                                                    <option value="0.1">10% (p < 0.1)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch mt-4">
+                                                <input class="form-check-input" type="checkbox" id="showHeatmap" name="show_heatmap" checked>
+                                                <label class="form-check-label" for="showHeatmap">生成热力图</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid mt-3">
+                                <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                                    <i class="fas fa-chart-scatter me-2"></i>开始分析
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 分析结果卡片，初始隐藏 -->
+    {% if result %}
+    <div class="card mt-4" id="resultCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">分析结果: {{ result.primary_metric.name }} 的相关性</h2>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="exportResultBtn">
+                    <i class="fas fa-download me-1"></i>导出
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#resultPanelCollapse" aria-expanded="true">
+                    <i class="fas fa-angle-up"></i>
+                </button>
+            </div>
+        </div>
+        <div class="collapse show" id="resultPanelCollapse">
+            <div class="card-body">
+                <!-- 相关性热力图 -->
+                {% if result.show_heatmap %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">相关性热力图</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="heatmapChart" class="correlation-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- 每对指标的相关性分析 -->
+                <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+                    {% for correlation in result.correlations %}
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">{{ result.primary_metric.name }} 与 {{ correlation.secondary_name }} 的相关性</h5>
+                                
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="lagDropdown{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        滞后: {{ correlation.lag }}
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="lagDropdown{{ loop.index }}">
+                                        <li><a class="dropdown-item lag-select" data-pair-id="{{ loop.index }}" data-lag="0" href="#">无滞后 (0)</a></li>
+                                        <li><a class="dropdown-item lag-select" data-pair-id="{{ loop.index }}" data-lag="1" href="#">滞后 1</a></li>
+                                        <li><a class="dropdown-item lag-select" data-pair-id="{{ loop.index }}" data-lag="2" href="#">滞后 2</a></li>
+                                        <li><a class="dropdown-item lag-select" data-pair-id="{{ loop.index }}" data-lag="3" href="#">滞后 3</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="correlation-value 
+                                            {% if correlation.coefficient >= 0.7 %}strong-positive
+                                            {% elif correlation.coefficient >= 0.4 %}moderate-positive
+                                            {% elif correlation.coefficient > 0.1 %}weak-positive
+                                            {% elif correlation.coefficient >= -0.1 %}negligible
+                                            {% elif correlation.coefficient >= -0.4 %}weak-negative
+                                            {% elif correlation.coefficient >= -0.7 %}moderate-negative
+                                            {% else %}strong-negative{% endif %}">
+                                            {{ "%.3f"|format(correlation.coefficient) }}
+                                        </div>
+                                        <div class="correlation-description">
+                                            {% if correlation.coefficient >= 0.7 %}强正相关
+                                            {% elif correlation.coefficient >= 0.4 %}中度正相关
+                                            {% elif correlation.coefficient > 0.1 %}弱正相关
+                                            {% elif correlation.coefficient >= -0.1 %}几乎无相关
+                                            {% elif correlation.coefficient >= -0.4 %}弱负相关
+                                            {% elif correlation.coefficient >= -0.7 %}中度负相关
+                                            {% else %}强负相关{% endif %}
+                                        </div>
+                                        <div class="correlation-significance">
+                                            {% if correlation.p_value < 0.01 %}
+                                                <span class="badge bg-success">高度显著 (p < 0.01)</span>
+                                            {% elif correlation.p_value < 0.05 %}
+                                                <span class="badge bg-success">显著 (p < 0.05)</span>
+                                            {% elif correlation.p_value < 0.1 %}
+                                                <span class="badge bg-warning">边际显著 (p < 0.1)</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">不显著 (p = {{ "%.3f"|format(correlation.p_value) }})</span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="correlation-detail mt-3">
+                                            <p><strong>相关性解读:</strong></p>
+                                            <p>{{ correlation.interpretation }}</p>
+                                            
+                                            {% if correlation.optimal_lag is defined and correlation.optimal_lag != 0 %}
+                                            <div class="alert alert-info">
+                                                <strong>最佳滞后值:</strong> {{ correlation.optimal_lag }} 个时间单位
+                                                (r = {{ "%.3f"|format(correlation.optimal_coefficient) }})
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="scatterChart{{ loop.index }}" class="scatter-chart"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 总结分析 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">相关性总结</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead">{{ result.summary | safe }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 添加指标按钮
+        document.getElementById('addMetricBtn').addEventListener('click', function() {
+            addDynamicField('secondaryMetrics', 'metricTemplate', 'metric-remove-btn');
+        });
+        
+        // 添加默认的次要指标
+        if (document.getElementById('secondaryMetrics').children.length === 0) {
+            addDynamicField('secondaryMetrics', 'metricTemplate', 'metric-remove-btn');
+        }
+        
+        // 加载示例数据
+        document.getElementById('loadSampleDataBtn').addEventListener('click', function() {
+            document.getElementById('primaryMetricName').value = '日活跃用户数';
+            document.getElementById('primaryMetricValues').value = '10520\n10982\n11420\n12058\n12743\n13125\n12897\n13452\n14230\n14789\n15324\n15942\n16321\n16890\n16540\n17234\n17892\n18345\n18734\n19243\n19562\n20134\n20876\n21345';
+            document.getElementById('timestamps').value = '2023-01-01\n2023-01-15\n2023-02-01\n2023-02-15\n2023-03-01\n2023-03-15\n2023-04-01\n2023-04-15\n2023-05-01\n2023-05-15\n2023-06-01\n2023-06-15\n2023-07-01\n2023-07-15\n2023-08-01\n2023-08-15\n2023-09-01\n2023-09-15\n2023-10-01\n2023-10-15\n2023-11-01\n2023-11-15\n2023-12-01\n2023-12-15';
+            
+            // 添加次要指标示例数据
+            const secondaryMetrics = document.getElementById('secondaryMetrics');
+            if (secondaryMetrics.children.length === 0) {
+                addDynamicField('secondaryMetrics', 'metricTemplate', 'metric-remove-btn');
+            }
+            
+            // 设置第一个次要指标示例数据
+            const firstMetric = secondaryMetrics.children[0];
+            if (firstMetric) {
+                firstMetric.querySelector('input[name="secondary_metric_names[]"]').value = '广告支出';
+                firstMetric.querySelector('textarea[name="secondary_values[]"]').value = '5200\n5500\n6100\n6300\n7000\n7200\n7100\n7400\n7800\n8200\n8500\n8800\n9000\n9200\n9000\n9500\n9800\n10000\n10200\n10500\n10700\n11000\n11300\n11500';
+            }
+            
+            // 添加第二个次要指标
+            addDynamicField('secondaryMetrics', 'metricTemplate', 'metric-remove-btn');
+            const secondMetric = secondaryMetrics.children[1];
+            if (secondMetric) {
+                secondMetric.querySelector('input[name="secondary_metric_names[]"]').value = '网站访问量';
+                secondMetric.querySelector('textarea[name="secondary_values[]"]').value = '25400\n26300\n27100\n28400\n29200\n30100\n29800\n31200\n32500\n33800\n34700\n36200\n37100\n38400\n37800\n39200\n40500\n41700\n42300\n43800\n44600\n46200\n47500\n48900';
+            }
+        });
+        
+        // 提交前显示加载状态
+        document.getElementById('correlationAnalysisForm').addEventListener('submit', function() {
+            document.getElementById('analyzeBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>分析中...';
+            document.getElementById('analyzeBtn').disabled = true;
+        });
+        
+        {% if result %}
+        // 绘制热力图
+        {% if result.show_heatmap %}
+        const correlationMatrix = {{ result.correlation_matrix | tojson }};
+        const metricNames = {{ result.metric_names | tojson }};
+        
+        const heatmapData = [{
+            z: correlationMatrix,
+            x: metricNames,
+            y: metricNames,
+            type: 'heatmap',
+            colorscale: [
+                [0, 'rgb(185, 28, 28)'],      // 强负相关: 深红色
+                [0.15, 'rgb(239, 68, 68)'],   // 中度负相关: 红色
+                [0.3, 'rgb(252, 165, 165)'],  // 弱负相关: 浅红色
+                [0.45, 'rgb(229, 231, 235)'], // 无相关: 灰色
+                [0.55, 'rgb(229, 231, 235)'], // 无相关: 灰色
+                [0.7, 'rgb(134, 239, 172)'],  // 弱正相关: 浅绿色
+                [0.85, 'rgb(34, 197, 94)'],   // 中度正相关: 绿色
+                [1, 'rgb(21, 128, 61)']       // 强正相关: 深绿色
+            ],
+            zmin: -1,
+            zmax: 1,
+            hoverongaps: false,
+            text: correlationMatrix.map((row, i) => {
+                return row.map((value, j) => {
+                    const pValue = {{ result.p_value_matrix | tojson }}[i][j];
+                    let significance = '';
+                    if (pValue < 0.01) significance = ' (p<0.01)';
+                    else if (pValue < 0.05) significance = ' (p<0.05)';
+                    else if (pValue < 0.1) significance = ' (p<0.1)';
+                    else significance = ` (p=${pValue.toFixed(3)})`;
+                    
+                    return `${metricNames[i]} 与 ${metricNames[j]}<br>r = ${value.toFixed(3)}${significance}`;
+                });
+            }),
+            hoverinfo: 'text'
+        }];
+        
+        const heatmapLayout = {
+            title: '相关性热力图',
+            xaxis: {
+                title: '指标',
+                automargin: true
+            },
+            yaxis: {
+                title: '指标',
+                automargin: true
+            },
+            annotations: correlationMatrix.map((row, i) => {
+                return row.map((value, j) => {
+                    // 决定文本颜色，深色背景用白色文本，浅色背景用黑色文本
+                    let textColor = 'black';
+                    if (value > 0.7 || value < -0.7) textColor = 'white';
+                    
+                    return {
+                        xref: 'x',
+                        yref: 'y',
+                        x: j,
+                        y: i,
+                        text: value.toFixed(2),
+                        font: {
+                            color: textColor
+                        },
+                        showarrow: false
+                    };
+                });
+            }).flat(),
+            margin: {l: 100, r: 20, t: 50, b: 100}
+        };
+        
+        Plotly.newPlot('heatmapChart', heatmapData, heatmapLayout, {responsive: true});
+        {% endif %}
+        
+        // 绘制每对指标的散点图
+        {% for correlation in result.correlations %}
+        const primary{{ loop.index }} = {{ correlation.primary_values | tojson }};
+        const secondary{{ loop.index }} = {{ correlation.secondary_values | tojson }};
+        
+        const scatterData{{ loop.index }} = [{
+            x: primary{{ loop.index }},
+            y: secondary{{ loop.index }},
+            mode: 'markers',
+            type: 'scatter',
+            marker: {
+                size: 10,
+                color: 'rgba(99, 102, 241, 0.7)',
+                line: {
+                    color: 'rgba(99, 102, 241, 1)',
+                    width: 1
+                }
+            },
+            name: '数据点'
+        }];
+        
+        // 添加趋势线
+        if (Math.abs({{ correlation.coefficient }}) > 0.1) {
+            const xValues = [...primary{{ loop.index }}].sort((a, b) => a - b);
+            const slope = {{ correlation.slope }};
+            const intercept = {{ correlation.intercept }};
+            const yValues = xValues.map(x => slope * x + intercept);
+            
+            scatterData{{ loop.index }}.push({
+                x: xValues,
+                y: yValues,
+                mode: 'lines',
+                type: 'scatter',
+                line: {
+                    color: '{% if correlation.coefficient >= 0 %}rgba(34, 197, 94, 1){% else %}rgba(239, 68, 68, 1){% endif %}',
+                    width: 2
+                },
+                name: '趋势线'
+            });
+        }
+        
+        const scatterLayout{{ loop.index }} = {
+            title: {
+                text: '散点图',
+                font: {
+                    size: 14
+                }
+            },
+            xaxis: {
+                title: {
+                    text: '{{ result.primary_metric.name }}',
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            yaxis: {
+                title: {
+                    text: '{{ correlation.secondary_name }}',
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            margin: {l: 50, r: 20, t: 40, b: 50},
+            showlegend: false,
+            annotations: [{
+                xref: 'paper',
+                yref: 'paper',
+                x: 0.5,
+                y: 1.1,
+                text: `r = {{ "%.3f"|format(correlation.coefficient) }}{% if correlation.p_value < 0.05 %} (p < 0.05){% endif %}`,
+                showarrow: false,
+                font: {
+                    size: 12
+                }
+            }]
+        };
+        
+        Plotly.newPlot('scatterChart{{ loop.index }}', scatterData{{ loop.index }}, scatterLayout{{ loop.index }}, {responsive: true});
+        {% endfor %}
+        
+        // 导出结果
+        document.getElementById('exportResultBtn').addEventListener('click', function() {
+            const result = {{ result | tojson }};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "correlation_analysis_result.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+        
+        // 滞后值选择
+        document.querySelectorAll('.lag-select').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const pairId = this.dataset.pairId;
+                const lag = this.dataset.lag;
+                
+                // 这里可以添加异步获取不同滞后值的相关性数据的逻辑
+                // 实际项目中，这里应该是一个AJAX请求，获取新的相关性数据
+                alert(`为对 ${pairId} 请求滞后值 ${lag} 的相关性数据`);
+            });
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %} 

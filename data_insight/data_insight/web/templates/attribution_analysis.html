@@ -1,0 +1,755 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .attribution-chart {
+        width: 100%;
+        height: 450px;
+    }
+    
+    .factor-bar {
+        height: 30px;
+        background-color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding-left: 0.75rem;
+        color: white;
+        font-weight: 500;
+        position: relative;
+    }
+    
+    .factor-bar .percentage {
+        position: absolute;
+        right: 0.75rem;
+    }
+    
+    .top-factor {
+        background-color: var(--primary-color-dark);
+    }
+    
+    .factor-item {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        position: relative;
+    }
+    
+    .factor-remove-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    
+    .sample-data-btn {
+        position: absolute;
+        right: 1rem;
+        top: 2.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .data-input-container {
+        position: relative;
+    }
+    
+    .data-format-hint {
+        position: absolute;
+        right: 0.5rem;
+        top: 0.5rem;
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    
+    .method-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    
+    .method-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .method-card.selected {
+        border-color: var(--primary-color);
+        background-color: #eef2ff;
+    }
+    
+    .method-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #eef2ff;
+        border-radius: 50%;
+        margin-bottom: 0.75rem;
+    }
+    
+    .target-metric-row {
+        background-color: #f0f9ff; /* 淡蓝色背景 */
+        border-left: 3px solid var(--info-color);
+    }
+    
+    .factor-contribution-table th:first-child,
+    .factor-contribution-table td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 10;
+    }
+    
+    .factor-contribution-table th:first-child {
+        background-color: #f9fafb;
+    }
+    
+    .coefficient-cell {
+        font-weight: 600;
+    }
+    
+    .coefficient-cell.positive {
+        color: var(--secondary-color);
+    }
+    
+    .coefficient-cell.negative {
+        color: var(--danger-color);
+    }
+    
+    .p-value-cell {
+        font-size: 0.85rem;
+    }
+    
+    .p-value-cell.significant {
+        color: var(--secondary-color);
+    }
+    
+    .p-value-cell.not-significant {
+        color: var(--danger-color);
+    }
+    
+    .error-band {
+        fill-opacity: 0.2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- 分析表单卡片 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">归因分析</h2>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#analysisPanelCollapse" aria-expanded="true">
+                <i class="fas fa-angle-up"></i>
+            </button>
+        </div>
+        <div class="collapse show" id="analysisPanelCollapse">
+            <div class="card-body">
+                <form id="attributionAnalysisForm" method="post" action="{{ url_for('web.attribution_analysis') }}">
+                    <div class="row mb-4">
+                        <div class="col-md-5">
+                            <div class="mb-3">
+                                <label for="targetMetricName" class="form-label">目标指标名称</label>
+                                <input type="text" class="form-control" id="targetMetricName" name="target_metric_name" required placeholder="例如：转化率">
+                            </div>
+                            
+                            <div class="mb-3 data-input-container">
+                                <label for="targetMetricValues" class="form-label">目标指标数据</label>
+                                <span class="data-format-hint">一行一个数值</span>
+                                <textarea class="form-control" id="targetMetricValues" name="target_values" rows="6" required placeholder="2.5&#10;2.7&#10;3.1&#10;3.3&#10;3.6&#10;3.8"></textarea>
+                                <button type="button" class="btn btn-sm btn-link sample-data-btn" id="loadSampleDataBtn">载入示例数据</button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <label class="form-label">影响因素</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="addFactorBtn">
+                                    <i class="fas fa-plus me-1"></i>添加因素
+                                </button>
+                            </div>
+                            
+                            <div id="factors">
+                                <!-- 动态添加的因素会插入到这里 -->
+                            </div>
+                            
+                            <template id="factorTemplate">
+                                <div class="factor-item dynamic-item">
+                                    <button type="button" class="btn btn-sm btn-outline-danger factor-remove-btn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">因素名称</label>
+                                                <input type="text" class="form-control" name="factor_names[]" required placeholder="例如：广告支出">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3 data-input-container">
+                                                <label class="form-label">因素数据<span class="text-danger">*</span></label>
+                                                <span class="data-format-hint">一行一个数值</span>
+                                                <textarea class="form-control" name="factor_values[]" rows="4" required placeholder="5200&#10;5500&#10;6100&#10;6300&#10;7000&#10;7200"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-5">
+                            <div class="mb-3 data-input-container">
+                                <label for="timestamps" class="form-label">时间戳</label>
+                                <span class="data-format-hint">一行一个日期，与指标数据行数一致</span>
+                                <textarea class="form-control" id="timestamps" name="timestamps" rows="6" required placeholder="2023-01-01&#10;2023-01-02&#10;2023-01-03&#10;2023-01-04&#10;2023-01-05&#10;2023-01-06"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div class="mb-3">
+                                <label class="form-label">归因分析方法</label>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card method-card selected" data-method="linear">
+                                            <div class="card-body text-center">
+                                                <div class="method-icon mx-auto">
+                                                    <i class="fas fa-chart-line text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">线性回归</h5>
+                                                <p class="card-text small text-muted">适用于发现线性关系的归因分析</p>
+                                                <input type="radio" name="method" value="linear" checked class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card method-card" data-method="random_forest">
+                                            <div class="card-body text-center">
+                                                <div class="method-icon mx-auto">
+                                                    <i class="fas fa-tree text-primary"></i>
+                                                </div>
+                                                <h5 class="card-title">随机森林</h5>
+                                                <p class="card-text small text-muted">适用于发现非线性关系的归因分析</p>
+                                                <input type="radio" name="method" value="random_forest" class="d-none">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5 class="mb-0">高级选项</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="significanceLevel" class="form-label">显著性水平</label>
+                                                <select class="form-select" id="significanceLevel" name="significance_level">
+                                                    <option value="0.01">1% (p < 0.01)</option>
+                                                    <option value="0.05" selected>5% (p < 0.05)</option>
+                                                    <option value="0.1">10% (p < 0.1)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="normalization" class="form-label">归一化方法</label>
+                                                <select class="form-select" id="normalization" name="normalization">
+                                                    <option value="none">不归一化</option>
+                                                    <option value="minmax" selected>最小-最大缩放</option>
+                                                    <option value="standard">标准化 (Z-score)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="detectMulticollinearity" name="detect_multicollinearity" checked>
+                                                <label class="form-check-label" for="detectMulticollinearity">检测多重共线性</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="calculateConfidenceIntervals" name="calculate_confidence_intervals" checked>
+                                                <label class="form-check-label" for="calculateConfidenceIntervals">计算置信区间</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid mt-3">
+                                <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                                    <i class="fas fa-sitemap me-2"></i>开始分析
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 分析结果卡片，初始隐藏 -->
+    {% if result %}
+    <div class="card mt-4" id="resultCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0 fs-4">归因分析结果: {{ result.target_metric.name }}</h2>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="exportResultBtn">
+                    <i class="fas fa-download me-1"></i>导出
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#resultPanelCollapse" aria-expanded="true">
+                    <i class="fas fa-angle-up"></i>
+                </button>
+            </div>
+        </div>
+        <div class="collapse show" id="resultPanelCollapse">
+            <div class="card-body">
+                <!-- 主要指标和模型质量 -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">模型质量</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <h3 class="mb-0 fs-4 text-primary">{{ (result.model_quality.r_squared * 100) | round(1) }}%</h3>
+                                                <div class="small text-muted">R² 解释率</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <h3 class="mb-0 fs-4 text-primary">{{ result.model_quality.rmse | round(3) }}</h3>
+                                                <div class="small text-muted">均方根误差</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <h3 class="mb-0 fs-4 text-primary">{{ result.model_quality.mae | round(3) }}</h3>
+                                                <div class="small text-muted">平均绝对误差</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center p-3">
+                                                <h3 class="mb-0 fs-4 text-primary">{{ result.significant_factors | length }}</h3>
+                                                <div class="small text-muted">显著因素数量</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6 class="mb-2">模型评估</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>模型质量</span>
+                                        <span class="badge {{ result.model_quality.quality_rating == 'excellent' ? 'bg-success' : (result.model_quality.quality_rating == 'good' ? 'bg-primary' : (result.model_quality.quality_rating == 'average' ? 'bg-warning' : 'bg-danger')) }}">
+                                            {{ result.model_quality.quality_rating | title }}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                {% if result.model_quality.warnings and result.model_quality.warnings|length > 0 %}
+                                <div class="mt-3">
+                                    <h6 class="mb-2">警告</h6>
+                                    <ul class="list-group list-group-flush">
+                                        {% for warning in result.model_quality.warnings %}
+                                        <li class="list-group-item py-2 ps-0 border-0">
+                                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>{{ warning }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">贡献度分析</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="contributionChart" class="attribution-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 因素贡献详情 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">因素贡献详情</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-3">贡献度排名</h6>
+                                        {% for factor in result.factors %}
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div style="width: 30px;" class="text-end me-2">{{ loop.index }}.</div>
+                                            <div class="flex-grow-1">
+                                                <div class="factor-bar {{ loop.first ? 'top-factor' : '' }}" style="width: {{ (factor.contribution * 100) | round(1) }}%">
+                                                    {{ factor.name }}
+                                                    <span class="percentage">{{ (factor.contribution * 100) | round(1) }}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <h6 class="mb-3">系数和显著性</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover factor-contribution-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>因素</th>
+                                                        <th>系数</th>
+                                                        <th>标准误差</th>
+                                                        <th>t/z值</th>
+                                                        <th>p值</th>
+                                                        <th>显著性</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for factor in result.factors %}
+                                                    <tr>
+                                                        <td>{{ factor.name }}</td>
+                                                        <td class="coefficient-cell {{ factor.coefficient > 0 ? 'positive' : 'negative' }}">
+                                                            {{ factor.coefficient | round(4) }}
+                                                        </td>
+                                                        <td>{{ factor.std_error | round(4) }}</td>
+                                                        <td>{{ factor.t_value | round(3) }}</td>
+                                                        <td class="p-value-cell {{ factor.p_value < result.significance_level ? 'significant' : 'not-significant' }}">
+                                                            {% if factor.p_value < 0.001 %}
+                                                                <0.001
+                                                            {% else %}
+                                                                {{ factor.p_value | round(3) }}
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if factor.p_value < 0.001 %}
+                                                                <span class="badge bg-success">***</span>
+                                                            {% elif factor.p_value < 0.01 %}
+                                                                <span class="badge bg-success">**</span>
+                                                            {% elif factor.p_value < 0.05 %}
+                                                                <span class="badge bg-success">*</span>
+                                                            {% elif factor.p_value < 0.1 %}
+                                                                <span class="badge bg-warning">.</span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">ns</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    {% if result.intercept %}
+                                                    <tr>
+                                                        <td>截距</td>
+                                                        <td class="coefficient-cell {{ result.intercept.coefficient > 0 ? 'positive' : 'negative' }}">
+                                                            {{ result.intercept.coefficient | round(4) }}
+                                                        </td>
+                                                        <td>{{ result.intercept.std_error | round(4) }}</td>
+                                                        <td>{{ result.intercept.t_value | round(3) }}</td>
+                                                        <td class="p-value-cell {{ result.intercept.p_value < result.significance_level ? 'significant' : 'not-significant' }}">
+                                                            {% if result.intercept.p_value < 0.001 %}
+                                                                <0.001
+                                                            {% else %}
+                                                                {{ result.intercept.p_value | round(3) }}
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if result.intercept.p_value < 0.001 %}
+                                                                <span class="badge bg-success">***</span>
+                                                            {% elif result.intercept.p_value < 0.01 %}
+                                                                <span class="badge bg-success">**</span>
+                                                            {% elif result.intercept.p_value < 0.05 %}
+                                                                <span class="badge bg-success">*</span>
+                                                            {% elif result.intercept.p_value < 0.1 %}
+                                                                <span class="badge bg-warning">.</span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">ns</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="6" class="small text-muted">
+                                                            显著性代码: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 'ns' 1
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 预测与实际值对比 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">预测与实际值对比</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="predictionChart" class="attribution-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 总结分析 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">归因分析总结</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="lead">{{ result.summary | safe }}</p>
+                                
+                                {% if result.recommendations and result.recommendations|length > 0 %}
+                                <h5 class="mt-4">改进建议</h5>
+                                <ul class="list-group list-group-flush">
+                                    {% for recommendation in result.recommendations %}
+                                    <li class="list-group-item py-2 ps-0 border-0">
+                                        <i class="fas fa-lightbulb text-warning me-2"></i>{{ recommendation }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 添加指标按钮
+        document.getElementById('addFactorBtn').addEventListener('click', function() {
+            addDynamicField('factors', 'factorTemplate', 'factor-remove-btn');
+        });
+        
+        // 添加默认的影响因素
+        if (document.getElementById('factors').children.length === 0) {
+            addDynamicField('factors', 'factorTemplate', 'factor-remove-btn');
+        }
+        
+        // 归因方法卡片选择
+        const methodCards = document.querySelectorAll('.method-card');
+        methodCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // 移除所有卡片的选中状态
+                methodCards.forEach(c => c.classList.remove('selected'));
+                // 为当前卡片添加选中状态
+                this.classList.add('selected');
+                // 选中对应的单选按钮
+                const method = this.dataset.method;
+                document.querySelector(`input[name="method"][value="${method}"]`).checked = true;
+            });
+        });
+        
+        // 加载示例数据
+        document.getElementById('loadSampleDataBtn').addEventListener('click', function() {
+            document.getElementById('targetMetricName').value = '转化率(%)';
+            document.getElementById('targetMetricValues').value = '2.4\n2.6\n2.7\n2.9\n3.2\n3.5\n3.4\n3.6\n3.9\n4.1\n4.3\n4.5\n4.4\n4.6\n4.3\n4.5\n4.7\n4.9\n5.0\n5.2\n5.1\n5.3\n5.5\n5.6';
+            document.getElementById('timestamps').value = '2023-01-01\n2023-01-15\n2023-02-01\n2023-02-15\n2023-03-01\n2023-03-15\n2023-04-01\n2023-04-15\n2023-05-01\n2023-05-15\n2023-06-01\n2023-06-15\n2023-07-01\n2023-07-15\n2023-08-01\n2023-08-15\n2023-09-01\n2023-09-15\n2023-10-01\n2023-10-15\n2023-11-01\n2023-11-15\n2023-12-01\n2023-12-15';
+            
+            // 添加影响因素示例数据
+            const factors = document.getElementById('factors');
+            if (factors.children.length === 0) {
+                addDynamicField('factors', 'factorTemplate', 'factor-remove-btn');
+            }
+            
+            // 设置第一个影响因素示例数据
+            const firstFactor = factors.children[0];
+            if (firstFactor) {
+                firstFactor.querySelector('input[name="factor_names[]"]').value = '广告支出(千元)';
+                firstFactor.querySelector('textarea[name="factor_values[]"]').value = '520\n550\n610\n630\n700\n720\n710\n740\n780\n820\n850\n880\n900\n920\n900\n950\n980\n1000\n1020\n1050\n1070\n1100\n1130\n1150';
+            }
+            
+            // 添加第二个影响因素
+            addDynamicField('factors', 'factorTemplate', 'factor-remove-btn');
+            const secondFactor = factors.children[1];
+            if (secondFactor) {
+                secondFactor.querySelector('input[name="factor_names[]"]').value = '网站访问量(千次)';
+                secondFactor.querySelector('textarea[name="factor_values[]"]').value = '254\n263\n271\n284\n292\n301\n298\n312\n325\n338\n347\n362\n371\n384\n378\n392\n405\n417\n423\n438\n446\n462\n475\n489';
+            }
+            
+            // 添加第三个影响因素
+            addDynamicField('factors', 'factorTemplate', 'factor-remove-btn');
+            const thirdFactor = factors.children[2];
+            if (thirdFactor) {
+                thirdFactor.querySelector('input[name="factor_names[]"]').value = '页面加载时间(秒)';
+                thirdFactor.querySelector('textarea[name="factor_values[]"]').value = '3.5\n3.4\n3.3\n3.2\n3.1\n3.0\n2.9\n2.8\n2.7\n2.6\n2.5\n2.4\n2.3\n2.2\n2.3\n2.2\n2.1\n2.0\n1.9\n1.8\n1.7\n1.6\n1.5\n1.4';
+            }
+        });
+        
+        // 提交前显示加载状态
+        document.getElementById('attributionAnalysisForm').addEventListener('submit', function() {
+            document.getElementById('analyzeBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>分析中...';
+            document.getElementById('analyzeBtn').disabled = true;
+        });
+        
+        {% if result %}
+        // 绘制贡献度饼图
+        const factorNames = {{ result.factors | map(attribute='name') | list | tojson }};
+        const contributions = {{ result.factors | map(attribute='contribution') | list | tojson }};
+        
+        const pieData = [{
+            labels: factorNames,
+            values: contributions,
+            type: 'pie',
+            textinfo: 'percent',
+            textposition: 'inside',
+            automargin: true,
+            hole: 0.4,
+            marker: {
+                colors: [
+                    '#4f46e5', '#3b82f6', '#0ea5e9', '#14b8a6', '#10b981', 
+                    '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444'
+                ]
+            }
+        }];
+        
+        const pieLayout = {
+            title: '各因素对{{ result.target_metric.name }}的贡献度',
+            showlegend: true,
+            legend: {
+                orientation: 'h',
+                y: -0.2
+            },
+            margin: {l: 20, r: 20, t: 50, b: 20},
+            annotations: [{
+                font: {
+                    size: 16
+                },
+                showarrow: false,
+                text: '贡献度',
+                x: 0.5,
+                y: 0.5
+            }]
+        };
+        
+        Plotly.newPlot('contributionChart', pieData, pieLayout, {responsive: true});
+        
+        // 绘制预测与实际值对比图
+        const timestamps = {{ result.timestamps | tojson }};
+        const actual = {{ result.target_metric.values | tojson }};
+        const predicted = {{ result.predictions.values | tojson }};
+        
+        const predictionData = [
+            {
+                x: timestamps,
+                y: actual,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '实际值',
+                line: {
+                    width: 3,
+                    color: '#3b82f6'
+                },
+                marker: {
+                    size: 8
+                }
+            },
+            {
+                x: timestamps,
+                y: predicted,
+                type: 'scatter',
+                mode: 'lines',
+                name: '预测值',
+                line: {
+                    width: 3,
+                    color: '#ef4444',
+                    dash: 'dash'
+                }
+            }
+        ];
+        
+        // 如果有置信区间，添加到图表
+        {% if result.predictions.confidence_intervals %}
+        const upperBound = {{ result.predictions.confidence_intervals.upper | tojson }};
+        const lowerBound = {{ result.predictions.confidence_intervals.lower | tojson }};
+        
+        predictionData.push({
+            x: timestamps.concat(timestamps.slice().reverse()),
+            y: upperBound.concat(lowerBound.slice().reverse()),
+            fill: 'toself',
+            fillcolor: 'rgba(239, 68, 68, 0.2)',
+            line: {
+                color: 'transparent'
+            },
+            name: '95% 置信区间',
+            showlegend: true,
+            hoverinfo: 'skip'
+        });
+        {% endif %}
+        
+        const predictionLayout = {
+            title: '预测值 vs 实际值',
+            xaxis: {
+                title: '日期'
+            },
+            yaxis: {
+                title: '{{ result.target_metric.name }}'
+            },
+            legend: {
+                orientation: 'h',
+                y: -0.2
+            },
+            margin: {l: 50, r: 20, t: 50, b: 50},
+            hovermode: 'closest'
+        };
+        
+        Plotly.newPlot('predictionChart', predictionData, predictionLayout, {responsive: true});
+        
+        // 导出结果
+        document.getElementById('exportResultBtn').addEventListener('click', function() {
+            const result = {{ result | tojson }};
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "attribution_analysis_result.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %} 

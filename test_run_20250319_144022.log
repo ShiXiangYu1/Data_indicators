@@ -1,0 +1,26 @@
+2025-03-19 14:40:22,233 - __main__ - INFO - 测试环境已设置，项目根目录: E:\cursor\202503+\数据指标\data_insight
+2025-03-19 14:40:22,233 - __main__ - INFO - 开始运行单元测试
+2025-03-19 14:40:22,233 - __main__ - INFO - 单元测试完成，耗时: 0.00秒
+2025-03-19 14:40:22,233 - __main__ - INFO - 运行测试: 0
+2025-03-19 14:40:22,233 - __main__ - INFO - 成功: 0
+2025-03-19 14:40:22,233 - __main__ - INFO - 失败: 0
+2025-03-19 14:40:22,233 - __main__ - INFO - 错误: 0
+2025-03-19 14:40:22,233 - __main__ - INFO - 开始运行Web界面测试
+2025-03-19 14:40:22,233 - __main__ - ERROR - 运行Web界面测试时发生错误: Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\web'
+2025-03-19 14:40:22,250 - __main__ - WARNING - API测试目录不存在: E:\cursor\202503+\数据指标\data_insight\tests\api
+2025-03-19 14:40:22,252 - __main__ - INFO - 开始运行端到端测试
+2025-03-19 14:40:22,252 - __main__ - ERROR - 运行端到端测试时发生错误: Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\e2e'
+2025-03-19 14:40:22,254 - __main__ - INFO - 开始运行性能测试
+2025-03-19 14:40:22,255 - __main__ - ERROR - 运行性能测试时发生错误: Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\performance'
+2025-03-19 14:40:22,255 - __main__ - INFO - 
+========== 测试运行总结 ==========
+2025-03-19 14:40:22,257 - __main__ - INFO - 总运行时间: 0.02秒
+2025-03-19 14:40:22,257 - __main__ - INFO - 总测试数: 0
+2025-03-19 14:40:22,257 - __main__ - INFO - 总成功数: -3
+2025-03-19 14:40:22,258 - __main__ - INFO - 总失败数: 0
+2025-03-19 14:40:22,258 - __main__ - INFO - 总错误数: 3
+2025-03-19 14:40:22,258 - __main__ - INFO - ========== 各分类测试结果 ==========
+2025-03-19 14:40:22,258 - __main__ - INFO - 单元测试: 测试 0, 成功 0 (0.0%), 失败 0, 错误 0
+2025-03-19 14:40:22,259 - __main__ - INFO - Web界面测试: 运行出错 - Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\web'
+2025-03-19 14:40:22,259 - __main__ - INFO - 端到端测试: 运行出错 - Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\e2e'
+2025-03-19 14:40:22,260 - __main__ - INFO - 性能测试: 运行出错 - Start directory is not importable: 'E:\\cursor\\202503+\\数据指标\\data_insight\\tests\\performance'
