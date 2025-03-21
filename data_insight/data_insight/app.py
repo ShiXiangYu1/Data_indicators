@@ -19,18 +19,17 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
+from data_insight.api.middlewares.auth import token_required
 from data_insight.api.routes.health import router as health_router
 from data_insight.api.routes.docs import router as docs_router
-from data_insight.api.routes.trend import router as trend_router
-from data_insight.api.routes.attribution import router as attribution_router
-from data_insight.api.routes.root_cause import router as root_cause_router
-from data_insight.api.routes.correlation import router as correlation_router
-from data_insight.api.routes.prediction import router as prediction_router
+from data_insight.api.routes.trend_api import router as trend_router
+from data_insight.api.routes.analysis_api import router as analysis_router
+from data_insight.api.routes.prediction_api import router as prediction_router
 from data_insight.api.routes.metrics import router as metrics_router
 from data_insight.api.routes.export import router as export_router
 from data_insight.api.routes.suggestion import router as suggestion_router
-from data_insight.api.routes.metric import bp as metric_bp
-from data_insight.api.routes.chart import bp as chart_bp
+from data_insight.api.routes.metric_api import router as metric_router
+from data_insight.api.routes.chart_api import router as chart_router
 from data_insight.utils.metrics import increment_request_count, record_request_duration
 from data_insight.web import register_web_views
 from data_insight.services import init_services
@@ -122,17 +121,15 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> FastAPI:
     
     # 注册分析API路由
     app.include_router(trend_router, prefix="/api/v1/trend")
-    app.include_router(attribution_router, prefix="/api/v1/attribution")
-    app.include_router(root_cause_router, prefix="/api/v1/root-cause")
-    app.include_router(correlation_router, prefix="/api/v1/correlation")
+    app.include_router(analysis_router, prefix="/api/v1/analysis")
     app.include_router(prediction_router, prefix="/api/v1/prediction")
     
     # 注册智能建议路由
     app.include_router(suggestion_router, prefix="/api/v1/suggestion")
     
-    # 注册指标和图表API（Flask蓝图）
-    app.include_router(metric_bp, prefix="/api/v1")
-    app.include_router(chart_bp, prefix="/api/v1")
+    # 注册指标和图表API
+    app.include_router(metric_router, prefix="/api/v1")
+    app.include_router(chart_router, prefix="/api/v1")
     
     # 注册监控指标路由
     app.include_router(metrics_router)

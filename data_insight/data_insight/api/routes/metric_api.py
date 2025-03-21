@@ -9,11 +9,15 @@ from flask import Blueprint, request, jsonify
 import json
 from datetime import datetime
 import logging
+from typing import Dict, Any, List, Optional
+
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import JSONResponse
 
 from data_insight.core.metric_analyzer import MetricAnalyzer
 from data_insight.core.metric_comparison_analyzer import MetricComparisonAnalyzer
 from data_insight.core.text_generator import TextGenerator
-from data_insight.api.middlewares.auth import require_api_token
+from data_insight.api.middlewares.auth import token_required
 from data_insight.api.middlewares.rate_limiter import rate_limit
 from data_insight.api.utils.validator import validate_json_request, Validator
 from data_insight.api.utils.response_formatter import (
@@ -21,8 +25,11 @@ from data_insight.api.utils.response_formatter import (
 )
 from data_insight.api.utils.async_task import run_async, task_manager
 
-# 创建蓝图
-bp = Blueprint('metric_api', __name__, url_prefix='/api/metric')
+# 创建Flask蓝图
+bp = Blueprint('metric', __name__, url_prefix='/api/metric')
+
+# 创建路由器
+router = APIRouter()
 
 # 初始化分析器和生成器
 metric_analyzer = MetricAnalyzer()
@@ -100,12 +107,11 @@ comparison_schema = {
 }
 
 
-@bp.route('/analyze', methods=['POST'])
-@require_api_token
+@router.post('/analyze')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(metric_schema)
-def analyze_metric():
+async def analyze_metric(request: Request, auth: bool = Depends(token_required)):
     """
     分析单个指标数据
     
@@ -113,7 +119,7 @@ def analyze_metric():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到指标分析请求: {json.dumps(data, ensure_ascii=False)}")
@@ -131,7 +137,7 @@ def analyze_metric():
         }
         
         # 返回结果
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="指标分析成功"
         ))
@@ -141,19 +147,14 @@ def analyze_metric():
         logger.error(f"指标分析异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"指标分析失败: {str(e)}",
-            error_code="ANALYSIS_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"指标分析失败: {str(e)}")
 
 
-@bp.route('/analyze-async', methods=['POST'])
-@require_api_token
+@router.post('/analyze-async')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(metric_schema)
-def analyze_metric_async():
+async def analyze_metric_async(request: Request, auth: bool = Depends(token_required)):
     """
     异步分析单个指标数据
     
@@ -161,7 +162,7 @@ def analyze_metric_async():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到异步指标分析请求: {json.dumps(data, ensure_ascii=False)}")
@@ -185,30 +186,25 @@ def analyze_metric_async():
         task_result = analyze_metric_task(data)
         
         # 返回任务信息
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=task_result,
             message="指标分析任务已提交",
             status_code=202
-        )), 202
+        ), status_code=202)
     
     except Exception as e:
         # 记录错误
         logger.error(f"提交指标分析任务异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"提交指标分析任务失败: {str(e)}",
-            error_code="TASK_SUBMISSION_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"提交指标分析任务失败: {str(e)}")
 
 
-@bp.route('/compare', methods=['POST'])
-@require_api_token
+@router.post('/compare')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(comparison_schema)
-def compare_metrics():
+async def compare_metrics(request: Request, auth: bool = Depends(token_required)):
     """
     比较多个指标数据
     
@@ -216,7 +212,7 @@ def compare_metrics():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到指标对比请求: {json.dumps(data, ensure_ascii=False)}")
@@ -234,7 +230,7 @@ def compare_metrics():
         }
         
         # 返回结果
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="指标对比分析成功"
         ))
@@ -244,19 +240,14 @@ def compare_metrics():
         logger.error(f"指标对比分析异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"指标对比分析失败: {str(e)}",
-            error_code="COMPARISON_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"指标对比分析失败: {str(e)}")
 
 
-@bp.route('/compare-async', methods=['POST'])
-@require_api_token
+@router.post('/compare-async')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(comparison_schema)
-def compare_metrics_async():
+async def compare_metrics_async(request: Request, auth: bool = Depends(token_required)):
     """
     异步比较多个指标数据
     
@@ -264,7 +255,7 @@ def compare_metrics_async():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到异步指标对比请求: {json.dumps(data, ensure_ascii=False)}")
@@ -288,27 +279,22 @@ def compare_metrics_async():
         task_result = compare_metrics_task(data)
         
         # 返回任务信息
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=task_result,
             message="指标对比分析任务已提交",
             status_code=202
-        )), 202
+        ), status_code=202)
     
     except Exception as e:
         # 记录错误
         logger.error(f"提交指标对比分析任务异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"提交指标对比分析任务失败: {str(e)}",
-            error_code="TASK_SUBMISSION_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"提交指标对比分析任务失败: {str(e)}")
 
 
-@bp.route('/task/<task_id>', methods=['GET'])
-@require_api_token
-def get_task_result(task_id):
+@router.get('/task/{task_id}')
+async def get_task_result(request: Request, task_id: str, auth: bool = Depends(token_required)):
     """
     获取任务结果
     
@@ -316,67 +302,63 @@ def get_task_result(task_id):
         task_id (str): 任务ID
     """
     try:
-        # 获取任务信息
+        # 获取任务
         task_info = task_manager.get_task_info(task_id)
+        
+        # 检查任务是否存在
         if not task_info:
-            return jsonify(format_error_response(
-                message=f"任务 {task_id} 不存在",
-                error_code="TASK_NOT_FOUND",
-                status_code=404
-            )), 404
+            raise HTTPException(
+                status_code=404,
+                detail=f"任务不存在: {task_id}"
+            )
         
-        # 获取任务结果
-        completed, result, error = task_manager.get_task_result(task_id)
+        # 检查任务状态
+        status = task_info["status"]
         
-        if not completed:
-            # 任务仍在处理中
-            return jsonify(format_success_response(
-                data={
-                    "task_id": task_id,
-                    "status": task_info["status"],
-                    "start_time": task_info["start_time"],
-                    "message": error or "任务正在处理中"
-                },
-                message="任务正在处理中",
+        # 根据状态返回不同的响应
+        if status == "completed":
+            # 获取任务结果
+            result = task_manager.get_task_result(task_id)
+            
+            return JSONResponse(content=format_success_response(
+                data=result,
+                message="任务完成"
+            ))
+            
+        elif status == "failed":
+            # 获取错误信息
+            error = task_info.get("error", "未知错误")
+            
+            raise HTTPException(
+                status_code=500,
+                detail=f"任务失败: {error}"
+            )
+            
+        elif status == "timeout":
+            raise HTTPException(
+                status_code=500,
+                detail="任务超时"
+            )
+            
+        else:  # pending or running
+            return JSONResponse(content=format_success_response(
+                data=task_info,
+                message=f"任务{task_info['status']}中",
                 status_code=202
-            )), 202
-        
-        if error:
-            # 任务失败
-            return jsonify(format_error_response(
-                message=f"任务执行失败: {error}",
-                error_code="TASK_EXECUTION_ERROR",
-                status_code=500
-            )), 500
-        
-        # 任务成功
-        return jsonify(format_success_response(
-            data={
-                "task_id": task_id,
-                "status": task_info["status"],
-                "start_time": task_info["start_time"],
-                "end_time": task_info["end_time"],
-                "duration": task_info["duration"],
-                "result": result
-            },
-            message="任务已完成"
-        ))
+            ), status_code=202)
     
+    except HTTPException:
+        raise
     except Exception as e:
         # 记录错误
         logger.error(f"获取任务结果异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"获取任务结果失败: {str(e)}",
-            error_code="TASK_RESULT_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"获取任务结果失败: {str(e)}")
 
 
-@bp.route('/task/<task_id>/cancel', methods=['POST'])
-@require_api_token
-def cancel_task(task_id):
+@router.post('/task/{task_id}/cancel')
+async def cancel_task(request: Request, task_id: str, auth: bool = Depends(token_required)):
     """
     取消任务
     
@@ -384,29 +366,44 @@ def cancel_task(task_id):
         task_id (str): 任务ID
     """
     try:
+        # 获取任务
+        task_info = task_manager.get_task_info(task_id)
+        
+        # 检查任务是否存在
+        if not task_info:
+            raise HTTPException(
+                status_code=404,
+                detail=f"任务不存在: {task_id}"
+            )
+        
+        # 检查任务状态
+        status = task_info["status"]
+        
+        # 只能取消正在运行或等待中的任务
+        if status not in ["pending", "running"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法取消{status}状态的任务"
+            )
+        
         # 取消任务
         success = task_manager.cancel_task(task_id)
         
         if not success:
-            return jsonify(format_error_response(
-                message=f"取消任务 {task_id} 失败",
-                error_code="TASK_CANCEL_FAILED",
-                status_code=400
-            )), 400
+            raise HTTPException(
+                status_code=500,
+                detail="取消任务失败"
+            )
         
-        # 返回成功响应
-        return jsonify(format_success_response(
-            data={"task_id": task_id},
+        return JSONResponse(content=format_success_response(
             message="任务已取消"
         ))
     
+    except HTTPException:
+        raise
     except Exception as e:
         # 记录错误
         logger.error(f"取消任务异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"取消任务失败: {str(e)}",
-            error_code="TASK_CANCEL_ERROR",
-            status_code=500
-        )), 500 
+        raise HTTPException(status_code=500, detail=f"取消任务失败: {str(e)}") 

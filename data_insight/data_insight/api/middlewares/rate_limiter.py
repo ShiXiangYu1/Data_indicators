@@ -227,14 +227,14 @@ def rate_limit(limiter_name: str = 'default') -> Callable:
     """
     def decorator(f: Callable) -> Callable:
         @functools.wraps(f)
-    def decorated(*args, **kwargs):
+        def decorated(*args, **kwargs):
             try:
                 # 获取速率限制器
                 limiter = current_app.rate_limiter_manager.get_limiter(limiter_name)
                 if not limiter:
                     # 如果速率限制器不存在，则继续执行被装饰的函数
-            return f(*args, **kwargs)
-        
+                    return f(*args, **kwargs)
+                
                 # 检查请求是否被允许
                 allowed, remaining, reset_time = limiter.is_allowed(request)
                 
@@ -248,29 +248,29 @@ def rate_limit(limiter_name: str = 'default') -> Callable:
                     # 如果请求超出速率限制，则返回429错误
                     response = jsonify(format_error_response(
                         message="API速率限制已达到，请稍后再试",
-                        status_code=429
+                        code=429,
+                        details={
+                            "reset_time": reset_time,
+                            "limit": limiter.limit,
+                            "window": limiter.window
+                        }
                     ))
                     response.status_code = 429
-            
-            # 设置速率限制响应头
-                if hasattr(response, 'headers'):
-                    response.headers['X-RateLimit-Limit'] = str(limiter.limit)
-                    response.headers['X-RateLimit-Remaining'] = str(remaining)
-                    response.headers['X-RateLimit-Reset'] = str(reset_time)
+                
+                # 设置速率限制响应头
+                if isinstance(response, (dict, str)):
+                    response = jsonify(response)
+                
+                response.headers["X-RateLimit-Limit"] = str(limiter.limit)
+                response.headers["X-RateLimit-Remaining"] = str(remaining)
+                response.headers["X-RateLimit-Reset"] = str(reset_time)
                 
                 return response
-            
+                
             except Exception as e:
-                # 记录错误
-                current_app.logger.error(f"速率限制错误: {str(e)}")
-                
-                # 返回500错误
-                response = jsonify(format_error_response(
-                    message=f"速率限制处理错误: {str(e)}",
-                    status_code=500
-                ))
-                response.status_code = 500
-                return response
+                logger.error(f"速率限制中间件错误: {str(e)}")
+                # 发生错误时，继续执行被装饰的函数
+                return f(*args, **kwargs)
         
         return decorated
     

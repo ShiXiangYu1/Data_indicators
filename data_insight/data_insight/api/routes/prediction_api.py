@@ -5,13 +5,17 @@
 提供时间序列预测和异常预测相关的API端点。
 """
 
-from flask import Blueprint, request, jsonify
 import json
 from datetime import datetime
 import logging
+from typing import Dict, Any, List, Optional
+
+from flask import Blueprint, request, jsonify
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import JSONResponse
 
 from data_insight.core.predictor import Predictor
-from data_insight.api.middlewares.auth import require_api_token
+from data_insight.api.middlewares.auth import token_required
 from data_insight.api.middlewares.rate_limiter import rate_limit
 from data_insight.api.utils.validator import validate_json_request, Validator
 from data_insight.api.utils.response_formatter import (
@@ -19,8 +23,11 @@ from data_insight.api.utils.response_formatter import (
 )
 from data_insight.api.utils.async_task import run_async, task_manager
 
-# 创建蓝图
-bp = Blueprint('prediction_api', __name__, url_prefix='/api/prediction')
+# 创建Flask蓝图
+bp = Blueprint('prediction', __name__, url_prefix='/api/prediction')
+
+# 创建路由器
+router = APIRouter()
 
 # 初始化预测器
 predictor = Predictor()
@@ -85,12 +92,11 @@ anomaly_prediction_schema = {
 }
 
 
-@bp.route('/forecast', methods=['POST'])
-@require_api_token
+@router.post('/forecast')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(prediction_schema)
-def forecast():
+async def forecast(request: Request, auth: bool = Depends(token_required)):
     """
     预测未来值
     
@@ -98,7 +104,7 @@ def forecast():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到预测请求: {json.dumps(data, ensure_ascii=False)}")
@@ -107,7 +113,7 @@ def forecast():
         prediction_result = predictor.analyze(data)
         
         # 返回结果
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=prediction_result,
             message="预测分析成功"
         ))
@@ -117,19 +123,14 @@ def forecast():
         logger.error(f"预测分析异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"预测分析失败: {str(e)}",
-            error_code="PREDICTION_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"预测分析失败: {str(e)}")
 
 
-@bp.route('/forecast-async', methods=['POST'])
-@require_api_token
+@router.post('/forecast-async')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(prediction_schema)
-def forecast_async():
+async def forecast_async(request: Request, auth: bool = Depends(token_required)):
     """
     异步预测未来值
     
@@ -137,7 +138,7 @@ def forecast_async():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到异步预测请求: {json.dumps(data, ensure_ascii=False)}")
@@ -152,30 +153,25 @@ def forecast_async():
         task_result = forecast_task(data)
         
         # 返回任务信息
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=task_result,
             message="预测分析任务已提交",
             status_code=202
-        )), 202
+        ), status_code=202)
     
     except Exception as e:
         # 记录错误
         logger.error(f"提交预测分析任务异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"提交预测分析任务失败: {str(e)}",
-            error_code="TASK_SUBMISSION_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"提交预测分析任务失败: {str(e)}")
 
 
-@bp.route('/anomaly', methods=['POST'])
-@require_api_token
+@router.post('/anomaly')
 @rate_limit
 @validate_json_request
 @Validator.validate_request(anomaly_prediction_schema)
-def predict_anomaly():
+async def predict_anomaly(request: Request, auth: bool = Depends(token_required)):
     """
     预测异常可能性
     
@@ -183,7 +179,7 @@ def predict_anomaly():
     """
     try:
         # 获取请求数据
-        data = request.json
+        data = await request.json()
         
         # 记录请求
         logger.info(f"接收到异常预测请求: {json.dumps(data, ensure_ascii=False)}")
@@ -195,11 +191,10 @@ def predict_anomaly():
         
         # 确保有足够的数据点
         if len(values) < lookback_periods + 1:
-            return jsonify(format_error_response(
-                message=f"历史数据点不足，至少需要 {lookback_periods + 1} 个数据点",
-                error_code="INSUFFICIENT_DATA",
-                status_code=400
-            )), 400
+            raise HTTPException(
+                status_code=400,
+                detail=f"历史数据点不足，至少需要 {lookback_periods + 1} 个数据点"
+            )
         
         # 为异常预测准备数据
         forecast_data = {
@@ -244,7 +239,7 @@ def predict_anomaly():
         }
         
         # 返回结果
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=anomaly_result,
             message="异常预测分析成功"
         ))
@@ -254,16 +249,11 @@ def predict_anomaly():
         logger.error(f"异常预测分析异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"异常预测分析失败: {str(e)}",
-            error_code="ANOMALY_PREDICTION_ERROR",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"异常预测分析失败: {str(e)}")
 
 
-@bp.route('/task/<task_id>', methods=['GET'])
-@require_api_token
-def get_task_result(task_id):
+@router.get('/task/{task_id}')
+async def get_task_result(request: Request, task_id: str, auth: bool = Depends(token_required)):
     """
     获取任务结果
     
@@ -276,11 +266,10 @@ def get_task_result(task_id):
         
         # 检查任务是否存在
         if not task_info:
-            return jsonify(format_error_response(
-                message=f"任务不存在: {task_id}",
-                error_code="TASK_NOT_FOUND",
-                status_code=404
-            )), 404
+            raise HTTPException(
+                status_code=404,
+                detail=f"任务不存在: {task_id}"
+            )
         
         # 检查任务状态
         status = task_info["status"]
@@ -290,7 +279,7 @@ def get_task_result(task_id):
             # 获取任务结果
             result = task_manager.get_task_result(task_id)
             
-            return jsonify(format_success_response(
+            return JSONResponse(content=format_success_response(
                 data=result,
                 message="预测分析完成"
             ))
@@ -299,33 +288,29 @@ def get_task_result(task_id):
             # 获取错误信息
             error = task_info.get("error", "未知错误")
             
-            return jsonify(format_error_response(
-                message=f"预测分析失败: {error}",
-                error_code="TASK_FAILED",
-                status_code=500
-            )), 500
+            raise HTTPException(
+                status_code=500,
+                detail=f"预测分析失败: {error}"
+            )
             
         elif status == "timeout":
-            return jsonify(format_error_response(
-                message="预测分析任务超时",
-                error_code="TASK_TIMEOUT",
-                status_code=500
-            )), 500
+            raise HTTPException(
+                status_code=500,
+                detail="预测分析任务超时"
+            )
             
         else:  # pending or running
-            return jsonify(format_success_response(
+            return JSONResponse(content=format_success_response(
                 data=task_info,
                 message=f"预测分析任务{task_info['status']}中",
                 status_code=202
-            )), 202
+            ), status_code=202)
     
+    except HTTPException:
+        raise
     except Exception as e:
         # 记录错误
         logger.error(f"获取预测分析任务结果异常: {str(e)}", exc_info=True)
         
         # 返回错误响应
-        return jsonify(format_error_response(
-            message=f"获取预测分析任务结果失败: {str(e)}",
-            error_code="TASK_RESULT_ERROR",
-            status_code=500
-        )), 500 
+        raise HTTPException(status_code=500, detail=f"获取预测分析任务结果失败: {str(e)}") 

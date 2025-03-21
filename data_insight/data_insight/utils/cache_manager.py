@@ -185,7 +185,7 @@ class CacheManager:
                         if namespaced_key in self.lru_list:
                             self.lru_list.remove(namespaced_key)
                         self.stats["misses"] += 1
-                        increment_cache_miss()
+                        increment_cache_miss(self.backend.value)
                         return default
                     
                     # 未过期，更新LRU列表
@@ -195,12 +195,12 @@ class CacheManager:
                     
                     # 返回缓存值
                     self.stats["hits"] += 1
-                    increment_cache_hit()
+                    increment_cache_hit(self.backend.value)
                     return self.cache[namespaced_key]
                 else:
                     # 键不存在
                     self.stats["misses"] += 1
-                    increment_cache_miss()
+                    increment_cache_miss(self.backend.value)
                     return default
             
             elif self.backend == CacheBackend.REDIS:
@@ -209,7 +209,7 @@ class CacheManager:
                 if value is not None:
                     # 缓存命中
                     self.stats["hits"] += 1
-                    increment_cache_hit()
+                    increment_cache_hit(self.backend.value)
                     try:
                         return pickle.loads(value)
                     except Exception as e:
@@ -218,7 +218,7 @@ class CacheManager:
                 else:
                     # 缓存未命中
                     self.stats["misses"] += 1
-                    increment_cache_miss()
+                    increment_cache_miss(self.backend.value)
                     return default
             
             elif self.backend == CacheBackend.FILE:
@@ -230,7 +230,7 @@ class CacheManager:
                         # 已过期，删除并返回默认值
                         self._remove_file_cache(namespaced_key)
                         self.stats["misses"] += 1
-                        increment_cache_miss()
+                        increment_cache_miss(self.backend.value)
                         return default
                     
                     # 未过期，从文件读取
@@ -244,24 +244,24 @@ class CacheManager:
                                 
                                 # 缓存命中
                                 self.stats["hits"] += 1
-                                increment_cache_hit()
+                                increment_cache_hit(self.backend.value)
                                 return pickle.load(f)
                         else:
                             # 文件不存在但索引存在，清理索引
                             del self.cache_index[namespaced_key]
                             self._save_cache_index()
                             self.stats["misses"] += 1
-                            increment_cache_miss()
+                            increment_cache_miss(self.backend.value)
                             return default
                     except Exception as e:
                         logger.error(f"无法读取文件缓存: {str(e)}")
                         self.stats["misses"] += 1
-                        increment_cache_miss()
+                        increment_cache_miss(self.backend.value)
                         return default
                 else:
                     # 键不存在
                     self.stats["misses"] += 1
-                    increment_cache_miss()
+                    increment_cache_miss(self.backend.value)
                     return default
             
             else:
@@ -318,7 +318,7 @@ class CacheManager:
                 self.lru_list.append(namespaced_key)
                 
                 # 设置缓存大小
-                set_cache_size(len(self.cache))
+                self._update_cache_size()
                 
                 self.stats["sets"] += 1
                 return True
@@ -403,7 +403,7 @@ class CacheManager:
                         self.lru_list.remove(namespaced_key)
                     
                     # 更新缓存大小
-                    set_cache_size(len(self.cache))
+                    self._update_cache_size()
                     
                     self.stats["deletes"] += 1
                     return True
@@ -449,7 +449,7 @@ class CacheManager:
                 self.lru_list.clear()
                 
                 # 更新缓存大小
-                set_cache_size(0)
+                self._update_cache_size()
                 
                 self.stats["clears"] += 1
                 return True
@@ -609,7 +609,7 @@ class CacheManager:
                     cleaned_count += 1
                 
                 # 更新缓存大小
-                set_cache_size(len(self.cache))
+                self._update_cache_size()
                 
                 return cleaned_count
             
@@ -682,6 +682,14 @@ class CacheManager:
         except Exception as e:
             logger.error(f"无法保存缓存索引: {str(e)}")
             return False
+    
+    def _update_cache_size(self) -> None:
+        """
+        更新缓存大小指标
+        """
+        if self.backend == CacheBackend.MEMORY:
+            size = len(self.cache)
+            set_cache_size(self.backend.value, size)
 
 
 # 单例缓存管理器实例

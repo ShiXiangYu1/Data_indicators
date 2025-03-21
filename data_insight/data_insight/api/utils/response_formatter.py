@@ -10,6 +10,7 @@ API响应格式化工具
 
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
+import json
 
 
 def format_success_response(
@@ -240,4 +241,66 @@ def format_export_response(
     if metadata:
         response["metadata"] = metadata
     
-    return response 
+    return response
+
+
+def format_validation_error(
+    message: str = "请求数据验证失败",
+    errors: Optional[Dict[str, List[str]]] = None,
+    status_code: int = 400
+) -> Dict[str, Any]:
+    """
+    格式化验证错误响应
+    
+    参数:
+        message (str, optional): 错误消息，默认为"请求数据验证失败"
+        errors (Optional[Dict[str, List[str]]], optional): 验证错误详情，默认为None
+        status_code (int, optional): 状态码，默认为400
+        
+    返回:
+        Dict[str, Any]: 格式化后的响应数据
+    """
+    response = {
+        "success": False,
+        "message": message,
+        "status_code": status_code,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    # 添加验证错误详情
+    if errors:
+        response["validation_errors"] = errors
+    
+    return response
+
+
+class ApiJSONEncoder(json.JSONEncoder):
+    """自定义JSON编码器，用于处理特殊类型的序列化"""
+    
+    def default(self, obj: Any) -> Any:
+        """
+        处理特殊类型的序列化
+        
+        参数:
+            obj (Any): 需要序列化的对象
+            
+        返回:
+            Any: 序列化后的对象
+        """
+        # 处理datetime对象
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+            
+        # 处理numpy数组
+        if hasattr(obj, 'tolist'):
+            return obj.tolist()
+            
+        # 处理pandas Series
+        if hasattr(obj, 'to_dict'):
+            return obj.to_dict()
+            
+        # 处理其他类型
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj) 

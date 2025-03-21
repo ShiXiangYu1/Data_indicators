@@ -377,6 +377,13 @@ def _register_system_metrics(registry: MetricsRegistry) -> None:
         ["cache_type"]
     )
     
+    registry.register(
+        "cache_size",
+        "缓存大小",
+        MetricType.GAUGE,
+        ["cache_type"]
+    )
+    
     # 异步任务指标
     registry.register(
         "async_tasks_total",
@@ -510,4 +517,29 @@ def record_analysis_duration(analysis_type: str, duration: float) -> None:
     registry = get_metrics_registry()
     registry.inc("analysis_duration_seconds", value=duration, labels={
         "analysis_type": analysis_type
-    }) 
+    })
+
+
+def set_cache_size(cache_type: str, size: int) -> None:
+    """
+    设置缓存大小指标
+    
+    参数:
+        cache_type (str): 缓存类型
+        size (int): 缓存大小
+    """
+    registry = get_metrics_registry()
+    registry.set("cache_size", size, {"type": cache_type})
+
+
+def record_cache_operation_time(cache_type: str, operation: str, duration: float) -> None:
+    """
+    记录缓存操作时间
+    
+    参数:
+        cache_type (str): 缓存类型
+        operation (str): 操作类型
+        duration (float): 操作耗时(秒)
+    """
+    registry = get_metrics_registry()
+    registry.set("cache_operation_duration_seconds", duration, {"type": cache_type, "operation": operation}) 

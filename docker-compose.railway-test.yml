@@ -1,0 +1,70 @@
+name: data-insight
+
+services:
+  # 模拟Railway主应用环境
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.railway-test
+    image: data-insight-api-test
+    container_name: data-insight-api-test
+    environment:
+      - PORT=8000
+      - DATA_INSIGHT_HOST=0.0.0.0
+      - DATA_INSIGHT_PORT=8000
+      - DATA_INSIGHT_DEBUG=false
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    command: gunicorn -w 4 -b 0.0.0.0:8000 "data_insight.api:create_app()"
+    depends_on:
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # 异步任务服务
+  async-tasks:
+    build:
+      context: .
+      dockerfile: Dockerfile.railway-test
+    image: data-insight-async-test
+    container_name: data-insight-async-test
+    environment:
+      - PORT=8001
+      - DATA_INSIGHT_HOST=0.0.0.0
+      - DATA_INSIGHT_PORT=8001
+      - DATA_INSIGHT_DEBUG=false
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://redis:6379/0
+      - TASK_QUEUE=data_insight_tasks
+    command: python -m data_insight.async_task_service
+    depends_on:
+      - redis
+    volumes:
+      - ./logs:/app/logs
+
+  # Redis服务
+  redis:
+    image: redis:6-alpine
+    container_name: data-insight-redis-test
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  redis-data:
+    driver: local 

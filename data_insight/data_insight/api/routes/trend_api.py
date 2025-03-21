@@ -12,8 +12,8 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from flask import Blueprint, request, jsonify, current_app
-from werkzeug.exceptions import BadRequest, Unauthorized
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import JSONResponse
 
 from data_insight.core.trend_analyzer import TrendAnalyzer
 from data_insight.models.insight_model import TrendResult
@@ -22,8 +22,8 @@ from data_insight.api.middlewares.rate_limiter import rate_limit
 from data_insight.api.middlewares.auth import token_required
 from data_insight.api.utils.request_validator import validate_request_data
 
-# 创建蓝图
-bp = Blueprint('trend', __name__, url_prefix='/api/trend')
+# 创建路由器
+router = APIRouter()
 
 
 def _calculate_trend_similarity(trend_results: List[TrendResult]) -> float:
@@ -100,10 +100,9 @@ def _generate_comparison_summary(trend_results: List[TrendResult], similarity: f
     return summary
 
 
-@bp.route('/analyze', methods=['POST'])
+@router.post('/analyze')
 @rate_limit
-@token_required
-def analyze_trend():
+async def analyze_trend(request: Request, auth: bool = Depends(token_required)):
     """
     趋势分析 API
     
@@ -119,43 +118,12 @@ def analyze_trend():
         "seasonality": true,
         "detect_inflections": true
     }
-    
-    返回:
-    {
-        "success": true,
-        "data": {
-            "trend": {
-                "metric_name": "日活跃用户",
-                "direction": "上升",
-                "slope": 45.71,
-                "significance": 0.89,
-                "r_squared": 0.89,
-                "pattern": "LINEAR_INCREASE",
-                "method": "linear",
-                "has_seasonality": false,
-                "seasonality_strength": null,
-                "seasonality_pattern": null
-            },
-            "inflections": [
-                {
-                    "date": "2023-05-01",
-                    "index": 4,
-                    "value": 1250,
-                    "type": "高点",
-                    "strength": 0.75
-                }
-            ],
-            "summary": "日活跃用户整体呈持续上升趋势，趋势非常显著，在2023-05-01出现显著高点",
-            "analysis_id": "tr-20230725-001"
-        },
-        "message": "趋势分析完成"
-    }
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证请求数据
         required_fields = ["metric_name", "values", "timestamps"]
@@ -163,10 +131,10 @@ def analyze_trend():
         
         # 验证数据长度
         if len(data["values"]) != len(data["timestamps"]):
-            raise BadRequest("值列表与时间戳列表长度必须一致")
+            raise HTTPException(status_code=400, detail="值列表与时间戳列表长度必须一致")
         
         if len(data["values"]) < 3:
-            raise BadRequest("趋势分析至少需要3个数据点")
+            raise HTTPException(status_code=400, detail="趋势分析至少需要3个数据点")
         
         # 创建分析器实例
         analyzer = TrendAnalyzer()
@@ -216,133 +184,71 @@ def analyze_trend():
             "analysis_id": analysis_id
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="趋势分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"趋势分析API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"分析过程中发生错误: {str(e)}")
 
 
-@bp.route('/compare', methods=['POST'])
+@router.post('/compare')
 @rate_limit
-@token_required
-def compare_trends():
+async def compare_trends(request: Request, auth: bool = Depends(token_required)):
     """
     趋势对比 API
     
     对比多个指标的趋势特征，分析它们之间的相似性和差异性
-    
-    请求体:
-    {
-        "metrics": [
-            {
-                "name": "销售额",
-                "values": [100, 120, 140, 150, 160, 180],
-                "timestamps": ["2023-01-01", "2023-02-01", "2023-03-01", 
-                              "2023-04-01", "2023-05-01", "2023-06-01"]
-            },
-            {
-                "name": "用户数",
-                "values": [1000, 1100, 1150, 1200, 1300, 1400],
-                "timestamps": ["2023-01-01", "2023-02-01", "2023-03-01", 
-                              "2023-04-01", "2023-05-01", "2023-06-01"]
-            }
-        ],
-        "normalize": true,
-        "trend_method": "linear"
-    }
-    
-    返回:
-    {
-        "success": true,
-        "data": {
-            "trends": [
-                {
-                    "metric_name": "销售额",
-                    "direction": "上升",
-                    "slope": 15.4,
-                    "pattern": "LINEAR_INCREASE"
-                },
-                {
-                    "metric_name": "用户数",
-                    "direction": "上升",
-                    "slope": 80.0,
-                    "pattern": "LINEAR_INCREASE"
-                }
-            ],
-            "similarity": 0.92,
-            "differences": [
-                "销售额增长率为15.4/月，用户数增长率为80.0/月",
-                "两个指标均呈线性增长趋势"
-            ],
-            "summary": "销售额和用户数趋势高度相似，均呈现稳定上升趋势",
-            "analysis_id": "tc-20230725-001"
-        },
-        "message": "趋势对比分析完成"
-    }
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证请求数据
         if "metrics" not in data or not isinstance(data["metrics"], list):
-            raise BadRequest("必须提供有效的指标列表")
+            raise HTTPException(status_code=400, detail="请求必须包含metrics列表")
         
         if len(data["metrics"]) < 2:
-            raise BadRequest("趋势对比至少需要2个指标")
-        
-        # 验证每个指标的数据
-        for i, metric in enumerate(data["metrics"]):
-            if "name" not in metric or "values" not in metric or "timestamps" not in metric:
-                raise BadRequest(f"指标 #{i+1} 必须包含name、values和timestamps字段")
-            
-            if len(metric["values"]) != len(metric["timestamps"]):
-                raise BadRequest(f"指标 '{metric['name']}' 的值列表与时间戳列表长度必须一致")
-            
-            if len(metric["values"]) < 3:
-                raise BadRequest(f"指标 '{metric['name']}' 至少需要3个数据点")
+            raise HTTPException(status_code=400, detail="至少需要两个指标进行对比")
         
         # 创建分析器实例
         analyzer = TrendAnalyzer()
         
-        # 设置趋势分析方法
-        trend_method = data.get("trend_method", "auto")
-        if trend_method not in ["auto", "linear", "exponential", "lowess"]:
-            trend_method = "auto"
-        
-        # 存储每个指标的分析结果
+        # 分析每个指标的趋势
         trend_results = []
         for metric in data["metrics"]:
+            # 验证指标数据
+            required_fields = ["name", "values", "timestamps"]
+            validate_request_data(metric, required_fields)
+            
+            if len(metric["values"]) != len(metric["timestamps"]):
+                raise HTTPException(status_code=400, detail=f"指标 {metric['name']} 的值列表与时间戳列表长度不一致")
+            
+            if len(metric["values"]) < 3:
+                raise HTTPException(status_code=400, detail=f"指标 {metric['name']} 至少需要3个数据点")
+            
+            # 分析趋势
             result = analyzer.analyze(
                 metric_name=metric["name"],
                 values=metric["values"],
                 timestamps=metric["timestamps"],
-                trend_method=trend_method,
-                seasonality=False,
-                detect_inflections=False
+                trend_method=data.get("trend_method", "auto"),
+                seasonality=data.get("seasonality", True),
+                detect_inflections=data.get("detect_inflections", True)
             )
             trend_results.append(result)
         
-        # 计算趋势相似度（使用方向和模式进行比较）
+        # 计算趋势相似度
         similarity = _calculate_trend_similarity(trend_results)
         
-        # 生成趋势差异点描述
+        # 生成差异点描述
         differences = _generate_trend_differences(trend_results)
         
-        # 生成摘要
+        # 生成对比摘要
         summary = _generate_comparison_summary(trend_results, similarity)
-        
-        # 生成分析ID
-        analysis_id = f"tc-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         
         # 格式化响应
         response_data = {
@@ -351,23 +257,20 @@ def compare_trends():
                     "metric_name": result.trend.metric_name,
                     "direction": result.trend.direction,
                     "slope": result.trend.slope,
-                    "pattern": str(result.trend.pattern)
+                    "pattern": str(result.trend.pattern),
+                    "method": result.trend.method
                 } for result in trend_results
             ],
-            "similarity": round(float(similarity), 2),
+            "similarity": similarity,
             "differences": differences,
             "summary": summary,
-            "analysis_id": analysis_id
+            "analysis_id": f"tc-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="趋势对比分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"趋势对比API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500 
+        raise HTTPException(status_code=500, detail=f"对比分析过程中发生错误: {str(e)}") 

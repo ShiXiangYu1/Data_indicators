@@ -59,8 +59,8 @@ def token_required(f: Callable) -> Callable:
     def decorated(*args, **kwargs):
         try:
             # 从请求头中获取令牌
-        token = request.headers.get('X-API-Token')
-        
+            token = request.headers.get('X-API-Token')
+            
             # 如果环境中未设置API令牌，则跳过验证
             if not current_app.config.get('API_TOKEN'):
                 return f(*args, **kwargs)

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据指标平台API文档</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+        }
+        .endpoint {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .endpoint-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .get {
+            background-color: #28a745;
+        }
+        .post {
+            background-color: #007bff;
+        }
+        .put {
+            background-color: #fd7e14;
+        }
+        .delete {
+            background-color: #dc3545;
+        }
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            font-size: 90%;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: Consolas, monospace;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>数据指标平台API文档</h1>
+
+    <div class="card">
+        <h2>简介</h2>
+        <p>数据指标平台提供了一系列API，用于数据指标分析、趋势识别、异常检测和智能洞察生成。本文档提供了API的使用说明和示例。</p>
+    </div>
+
+    <div class="card">
+        <h2>API基础信息</h2>
+        <ul>
+            <li><strong>基础URL</strong>: <code>http://127.0.0.1:8888</code></li>
+            <li><strong>API前缀</strong>: <code>/api</code></li>
+            <li><strong>健康检查</strong>: <code>/api/health</code></li>
+            <li><strong>内容类型</strong>: <code>application/json</code></li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>健康检查API</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method get">GET</span>
+                <span>/api/health</span>
+            </div>
+            <p>检查API服务是否正常运行</p>
+            
+            <h3>响应示例</h3>
+            <pre>{
+  "message": "服务运行正常",
+  "status": "healthy"
+}</pre>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>指标分析API</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method post">POST</span>
+                <span>/api/metric/analyze</span>
+            </div>
+            <p>分析单个指标的变化、趋势和异常情况</p>
+            
+            <h3>请求参数</h3>
+            <pre>{
+  "name": "月度销售额",
+  "value": 1250000,
+  "previous_value": 1000000,
+  "unit": "元",
+  "time_period": "2023年7月",
+  "previous_time_period": "2023年6月",
+  "historical_values": [920000, 980000, 950000, 1010000, 1000000]
+}</pre>
+            
+            <h3>响应示例</h3>
+            <pre>{
+  "success": true,
+  "message": "分析成功",
+  "data": {
+    "analysis": {
+      "change": {
+        "absolute": 250000,
+        "percentage": 25.0,
+        "trend": "上升"
+      },
+      "insights": [
+        "月度销售额环比增长25.0%，达到1,250,000元",
+        "本月增幅显著高于近期平均增长率",
+        "近6个月来最高的单月销售额"
+      ]
+    }
+  }
+}</pre>
+        </div>
+
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method post">POST</span>
+                <span>/api/metric/compare</span>
+            </div>
+            <p>比较多个指标之间的关系</p>
+            
+            <h3>请求参数</h3>
+            <pre>{
+  "metrics": [
+    {
+      "name": "销售额",
+      "value": 1250000,
+      "previous_value": 1000000,
+      "unit": "元",
+      "historical_values": [920000, 980000, 950000, 1010000, 1000000]
+    },
+    {
+      "name": "利润",
+      "value": 300000,
+      "previous_value": 250000,
+      "unit": "元",
+      "historical_values": [220000, 235000, 228000, 245000, 250000]
+    }
+  ],
+  "time_periods": ["2023年3月", "2023年4月", "2023年5月", "2023年6月", "2023年7月"]
+}</pre>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>图表分析API</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method post">POST</span>
+                <span>/api/chart/analyze</span>
+            </div>
+            <p>分析图表数据并生成洞察</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>趋势分析API</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method post">POST</span>
+                <span>/api/trend/analyze</span>
+            </div>
+            <p>分析时间序列数据的变化趋势</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>智能原因分析API</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-title">
+                <span class="method post">POST</span>
+                <span>/api/reason/analyze</span>
+            </div>
+            <p>分析指标变化背后的可能原因</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>认证与请求限制</h2>
+        <p>API接口需要认证才能访问。认证方式为在请求头中添加<code>X-API-Token</code>字段。</p>
+        <p>API请求限制为每个IP每分钟最多60次请求。</p>
+    </div>
+
+    <div class="card">
+        <h2>使用示例</h2>
+        
+        <h3>使用curl请求健康检查API</h3>
+        <pre>curl -X GET http://127.0.0.1:8888/api/health</pre>
+        
+        <h3>使用Python请求指标分析API</h3>
+        <pre>import requests
+import json
+
+url = "http://127.0.0.1:8888/api/metric/analyze"
+headers = {
+    "Content-Type": "application/json",
+    "X-API-Token": "您的API令牌"
+}
+data = {
+    "name": "月度销售额",
+    "value": 1250000,
+    "previous_value": 1000000,
+    "unit": "元",
+    "time_period": "2023年7月",
+    "previous_time_period": "2023年6月",
+    "historical_values": [920000, 980000, 950000, 1010000, 1000000]
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+result = response.json()
+print(json.dumps(result, indent=2, ensure_ascii=False))</pre>
+    </div>
+
+    <footer style="margin-top: 50px; text-align: center; color: #777; border-top: 1px solid #eee; padding-top: 20px;">
+        <p>数据指标平台API文档 | 版本: 0.1.0 | 最后更新: 2025年3月20日</p>
+    </footer>
+</body>
+</html> 

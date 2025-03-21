@@ -12,8 +12,9 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from flask import Blueprint, request, jsonify, current_app
-from werkzeug.exceptions import BadRequest, Unauthorized
+from flask import Blueprint, request, jsonify
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import JSONResponse
 
 from data_insight.core.reason_analyzer import ReasonAnalyzer
 from data_insight.core.attribution_analyzer import AttributionAnalyzer
@@ -24,14 +25,16 @@ from data_insight.api.utils.response_formatter import format_success_response, f
 from data_insight.api.middlewares.rate_limiter import rate_limit
 from data_insight.api.middlewares.auth import token_required
 
-# 创建蓝图
+# 创建Flask蓝图
 bp = Blueprint('analysis', __name__, url_prefix='/api/analysis')
 
+# 创建路由器
+router = APIRouter()
 
-@bp.route('/reason', methods=['POST'])
+
+@router.post('/reason')
 @rate_limit
-@token_required
-def analyze_reason():
+async def analyze_reason(request: Request, auth: bool = Depends(token_required)):
     """
     原因分析API
     
@@ -84,15 +87,15 @@ def analyze_reason():
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证必要字段
         required_fields = ["metric_name", "metric_value", "previous_value"]
         for field in required_fields:
             if field not in data:
-                raise BadRequest(f"缺少必要字段: {field}")
+                raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
         
         # 创建分析器实例
         analyzer = ReasonAnalyzer()
@@ -124,23 +127,18 @@ def analyze_reason():
             "analysis_id": analysis_id
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="原因分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"原因分析API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"分析过程中发生错误: {str(e)}")
 
 
-@bp.route('/attribution', methods=['POST'])
+@router.post('/attribution')
 @rate_limit
-@token_required
-def analyze_attribution():
+async def analyze_attribution(request: Request, auth: bool = Depends(token_required)):
     """
     归因分析API
     
@@ -184,15 +182,15 @@ def analyze_attribution():
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证必要字段
         required_fields = ["metric_name", "metric_value"]
         for field in required_fields:
             if field not in data:
-                raise BadRequest(f"缺少必要字段: {field}")
+                raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
         
         # 创建分析器实例
         analyzer = AttributionAnalyzer()
@@ -225,23 +223,18 @@ def analyze_attribution():
             "attribution_id": attribution_id
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="归因分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"归因分析API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"分析过程中发生错误: {str(e)}")
 
 
-@bp.route('/root-cause', methods=['POST'])
+@router.post('/root-cause')
 @rate_limit
-@token_required
-def analyze_root_cause():
+async def analyze_root_cause(request: Request, auth: bool = Depends(token_required)):
     """
     根因分析API
     
@@ -288,23 +281,18 @@ def analyze_root_cause():
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证必要字段
         required_fields = ["metric_name", "metric_value"]
         for field in required_fields:
             if field not in data:
-                raise BadRequest(f"缺少必要字段: {field}")
+                raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
         
         # 创建分析器实例
         analyzer = RootCauseAnalyzer()
-        
-        # 设置分析深度
-        analysis_depth = data.get("analysis_depth", "standard")
-        if analysis_depth not in ["basic", "standard", "advanced"]:
-            analysis_depth = "standard"
         
         # 执行分析
         result = analyzer.analyze(
@@ -312,43 +300,39 @@ def analyze_root_cause():
             current_value=data["metric_value"],
             previous_value=data.get("previous_value"),
             time_period=data.get("time_period"),
-            factors=data.get("factors", []),
-            causal_links=data.get("causal_links", []),
-            analysis_depth=analysis_depth
+            dimensions=data.get("dimensions", []),
+            related_metrics=data.get("related_metrics", []),
+            context=data.get("context", {}),
+            analysis_depth=data.get("analysis_depth", "standard")
         )
         
         # 生成分析ID
-        analysis_id = f"rc-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        root_cause_id = f"rc-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         
         # 格式化响应
         response_data = {
             "root_causes": result.root_causes,
-            "causal_graph": result.causal_graph,
+            "impact_paths": result.impact_paths,
             "summary": result.summary,
-            "analysis_id": analysis_id
+            "root_cause_id": root_cause_id
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="根因分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"根因分析API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500
+        raise HTTPException(status_code=500, detail=f"分析过程中发生错误: {str(e)}")
 
 
-@bp.route('/correlation', methods=['POST'])
+@router.post('/correlation')
 @rate_limit
-@token_required
-def analyze_correlation():
+async def analyze_correlation(request: Request, auth: bool = Depends(token_required)):
     """
     相关性分析API
     
-    分析指标之间的相关性，支持多种相关性计算方法
+    分析指标之间的相关性，基于历史数据和统计方法
     
     请求体:
     {
@@ -392,31 +376,24 @@ def analyze_correlation():
     """
     try:
         # 获取请求数据
-        data = request.get_json()
+        data = await request.json()
         if not data:
-            raise BadRequest("请求体不能为空")
+            raise HTTPException(status_code=400, detail="请求体不能为空")
         
         # 验证必要字段
-        required_fields = ["primary_metric", "secondary_metrics"]
+        required_fields = ["metrics"]
         for field in required_fields:
             if field not in data:
-                raise BadRequest(f"缺少必要字段: {field}")
+                raise HTTPException(status_code=400, detail=f"缺少必要字段: {field}")
         
         # 创建分析器实例
         analyzer = CorrelationAnalyzer()
         
-        # 设置相关性方法
-        correlation_method = data.get("correlation_method", "pearson")
-        if correlation_method not in ["pearson", "spearman", "kendall"]:
-            correlation_method = "pearson"
-        
         # 执行分析
         result = analyzer.analyze(
-            primary_metric=data["primary_metric"],
-            secondary_metrics=data["secondary_metrics"],
-            time_periods=data.get("time_periods", []),
-            correlation_method=correlation_method,
-            lag=data.get("lag", 0),
+            metrics=data["metrics"],
+            time_period=data.get("time_period"),
+            correlation_method=data.get("correlation_method", "pearson"),
             significance_level=data.get("significance_level", 0.05)
         )
         
@@ -426,18 +403,15 @@ def analyze_correlation():
         # 格式化响应
         response_data = {
             "correlations": result.correlations,
+            "significant_pairs": result.significant_pairs,
             "summary": result.summary,
-            "analysis_id": correlation_id
+            "correlation_id": correlation_id
         }
         
-        return jsonify(format_success_response(
+        return JSONResponse(content=format_success_response(
             data=response_data,
             message="相关性分析完成"
         ))
     
     except Exception as e:
-        current_app.logger.error(f"相关性分析API错误: {str(e)}")
-        return jsonify(format_error_response(
-            message=f"分析过程中发生错误: {str(e)}",
-            status_code=500
-        )), 500 
+        raise HTTPException(status_code=500, detail=f"分析过程中发生错误: {str(e)}") 
